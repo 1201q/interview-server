@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  app:
+    image: 1201q/interview:latest
+    container_name: interview
+    restart: always
+    expose:
+      - '8000'
+    networks:
+      - app-network
+    env_file:
+      - .env
+    environment:
+      - TZ=Asia/Seoul
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - app
+    networks:
+      - app-network
+    environment:
+      - TZ=Asia/Seoul
+
+networks:
+  app-network:
+    driver: bridge
