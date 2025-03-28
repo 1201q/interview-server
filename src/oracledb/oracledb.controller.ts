@@ -16,4 +16,9 @@ export class OracledbController {
   async createNewQuestion(@Body() body: createQuestionDto) {
     return this.oracledbService.createNewQuestion(body);
   }
+
+  @Post("bulk")
+  async createNewQuestions(@Body() body: createQuestionDto[]) {
+    return this.oracledbService.createNewQuestions(body);
+  }
 }
