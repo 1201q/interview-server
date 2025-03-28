@@ -1,9 +1,9 @@
 name: interview-server
 on:
   push:
-    branches: ['main']
+    branches: ["main"]
     paths:
-      - '**'
+      - "**"
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
@@ -29,7 +29,7 @@ jobs:
           username: ${{secrets.SSH_USERNAME}}
           key: ${{secrets.SSH_KEY}}
           port: ${{secrets.SSH_PORT}}
-          source: 'nginx.conf, docker-compose.yml'
+          source: "nginx.conf, docker-compose.yml"
           target: /home/ubuntu/interview
           overwrite: true
 
@@ -44,6 +44,10 @@ jobs:
             cd /home/ubuntu/interview
             sudo su
             docker system prune -f
+            echo "NODE_ENV=${{secrets.NODE_ENV}}" >> .env
+            echo "DB_USERNAME=${{secrets.DB_USERNAME}}" >> .env
+            echo "DB_PASSWORD=${{secrets.DB_PASSWORD}}" >> .env
+            echo "DB_CONNECTION=${{secrets.DB_CONNECTION}}" >> .env
             echo "OPENAI_API_KEY=${{secrets.OPENAI_API_KEY}}" >> .env
             docker-compose down
             docker-compose pull
