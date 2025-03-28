@@ -29,4 +29,30 @@ export class OracledbService {
       throw new Error(`Failed to create a new question: ${error.message}`);
     }
   }
+
+  async createNewQuestions(questions: Partial<RoleQuestion>[]) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const newQuestions = questions.map((q) => {
+        const newQuestion = new RoleQuestion();
+        newQuestion.question_text = q.question_text;
+        newQuestion.role = q.role;
+        newQuestion.id = uuidv4();
+
+        return newQuestion;
+      });
+
+      await queryRunner.manager.save(RoleQuestion, newQuestions);
+      await queryRunner.commitTransaction();
+      return newQuestions;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw new Error(`Failed to create new questions: ${error.message}`);
+    } finally {
+      await queryRunner.release();
+    }
+  }
 }
