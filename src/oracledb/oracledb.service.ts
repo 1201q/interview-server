@@ -55,4 +55,26 @@ export class OracledbService {
       await queryRunner.release();
     }
   }
+
+  async getQuestionCounts(roles: string[]) {
+    const result = await this.roleQuestionRepository
+      .createQueryBuilder("role_questions")
+      .select("role_questions.role", "role")
+      .addSelect("COUNT(*)", "count")
+      .where("role_questions.role IN (:...roles)", { roles })
+      .groupBy("role_questions.role")
+      .getRawMany();
+
+    const counts: Record<string, number> = {};
+
+    roles.forEach((role) => {
+      counts[role] = 0;
+    });
+
+    result.forEach((row) => {
+      counts[row.role] = Number(row.count);
+    });
+
+    return counts;
+  }
 }

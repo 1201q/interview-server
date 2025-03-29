@@ -12,6 +12,16 @@ export class OracledbController {
     return this.oracledbService.findAll();
   }
 
+  @Get("count")
+  async getQuestionCounts() {
+    return this.oracledbService.getQuestionCounts([
+      "fe",
+      "be",
+      "android",
+      "ios",
+    ]);
+  }
+
   @Post()
   async createNewQuestion(@Body() body: createQuestionDto) {
     return this.oracledbService.createNewQuestion(body);
