@@ -3,6 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, Repository } from "typeorm";
 import { RoleQuestion } from "./entities/question.entity";
 import { v4 as uuidv4 } from "uuid";
+import { RoleType } from "./types/type";
 
 @Injectable()
 export class OracledbService {
@@ -14,6 +15,10 @@ export class OracledbService {
 
   async findAll(): Promise<RoleQuestion[]> {
     return this.roleQuestionRepository.find();
+  }
+
+  async getQuestionByRole(role: RoleType): Promise<RoleQuestion[]> {
+    return this.roleQuestionRepository.find({ where: { role: role } });
   }
 
   async createNewQuestion(question: Partial<RoleQuestion>) {
@@ -56,7 +61,7 @@ export class OracledbService {
     }
   }
 
-  async getQuestionCounts(roles: string[]) {
+  async getQuestionCounts(roles: RoleType[]) {
     const result = await this.roleQuestionRepository
       .createQueryBuilder("role_questions")
       .select("role_questions.role", "role")

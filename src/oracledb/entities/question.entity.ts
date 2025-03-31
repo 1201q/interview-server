@@ -1,4 +1,5 @@
 import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { RoleType } from "../types/type";
 
 @Entity({ name: "role_questions" })
 export class RoleQuestion {
@@ -9,5 +10,5 @@ export class RoleQuestion {
   question_text: string;
 
   @Column({ type: "varchar", length: 10 })
-  role: "fe" | "be" | "android" | "ios";
+  role: RoleType;
 }
