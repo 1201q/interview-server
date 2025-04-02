@@ -43,7 +43,7 @@ jobs:
     needs: build-and-push-arm64
 
     steps:
-      - name: Checkout repository (for sending files)
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: 확인 - 현재 파일 구조 보기 (디버깅용)
@@ -52,7 +52,7 @@ jobs:
           echo "📄 포함된 파일들:"
           find . -type f
 
-      - name: Send nginx.conf & docker-compose.yml to server
+      - name: Send files to server
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -64,7 +64,7 @@ jobs:
           overwrite: true
           debug: true
 
-      - name: Deploy to server via SSH
+      - name: Deploy to server
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -74,14 +74,15 @@ jobs:
           script: |
             cd /home/ubuntu/interview
             echo "🔧 환경변수 생성중"
-            echo "NODE_ENV=${{ secrets.NODE_ENV }}" > .env
+            sudo su
+            docker system prune -f
+            echo "NODE_ENV=${{ secrets.NODE_ENV }}" >> .env
             echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
             echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
             echo "DB_CONNECTION=${{ secrets.DB_CONNECTION }}" >> .env
             echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
-            chown ubuntu:ubuntu .env
             echo "🚀 배포 시작..."
-            docker system prune -f
+            docker-compose down
             docker-compose pull
-            docker-compose up -d
+            docker-compose up -d --build
             echo "✅ 배포 완료!"
