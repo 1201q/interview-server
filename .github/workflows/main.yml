@@ -31,7 +31,7 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/interview:arm64
           build-args: |
-            BUILD_INLINE_CACHE=1
+            BUILDKIT_INLINE_CACHE=1
           cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/interview:cache
           cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/interview:cache,mode=max
 
@@ -46,7 +46,7 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          source: "nginx.conf,docker-compose.yml"
+          source: "nginx.conf, docker-compose.yml"
           target: /home/ubuntu/interview
           overwrite: true
 
@@ -66,6 +66,5 @@ jobs:
             echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
             echo "DB_CONNECTION=${{ secrets.DB_CONNECTION }}" >> .env
             echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
-            docker-compose down
             docker-compose pull
             docker-compose up -d --build
