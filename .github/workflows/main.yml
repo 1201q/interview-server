@@ -46,7 +46,7 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          source: "nginx.conf, docker-compose.yml"
+          source: "nginx.conf docker-compose.yml"
           target: /home/ubuntu/interview
           overwrite: true
 
