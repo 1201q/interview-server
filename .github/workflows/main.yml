@@ -83,6 +83,11 @@ jobs:
             echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
             echo "DB_CONNECTION=${{ secrets.DB_CONNECTION }}" >> .env
             echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+            echo "GOOGLE_CLIENT_ID=${{secrets.GOOGLE_CLIENT_ID}}" >> .env
+            echo "GOOGLE_CLIENT_SECRET=${{secrets.GOOGLE_CLIENT_SECRET}}" >> .env
+            echo "GOOGLE_OAUTH_CALLBACK_URL=${{secrets.GOOGLE_OAUTH_CALLBACK_URL}}" >> .env
+            echo "JWT_SECRET=${{secrets.JWT_SECRET}}" >> .env
+            echo "JWT_REFRESH_SECRET=${{secrets.JWT_REFRESH_SECRET}}" >> .env
             echo "🚀 배포 시작..."
             docker-compose down
             docker-compose pull
