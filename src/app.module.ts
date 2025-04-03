@@ -6,6 +6,7 @@ import { ConfigModule } from "@nestjs/config";
 
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { OracledbModule } from "./oracledb/oracledb.module";
+import { AuthModule } from "./auth/auth.module";
 
 @Module({
   imports: [
@@ -21,6 +22,8 @@ import { OracledbModule } from "./oracledb/oracledb.module";
     }),
 
     OracledbModule,
+
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
