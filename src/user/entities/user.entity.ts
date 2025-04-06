@@ -20,7 +20,7 @@ export class InterviewUser {
   email: string;
 
   @Column({ type: "varchar", length: 10 })
-  provider: "google";
+  provider: string;
 
   @CreateDateColumn({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })
   created_at: Date;

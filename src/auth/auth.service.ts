@@ -25,7 +25,7 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  async refreshAccessToken(refreshToken: string) {
+  async refreshTokens(refreshToken: string) {
     try {
       const decoded = this.jwtService.verify(refreshToken, {
         secret: this.configService.get("JWT_REFRESH_SECRET"),
