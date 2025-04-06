@@ -3,17 +3,17 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, Repository } from "typeorm";
 import { RoleQuestion } from "./entities/question.entity";
 import { v4 as uuidv4 } from "uuid";
-import { RoleType } from "./types/type";
+import { RoleType } from "../common/interfaces/common.interface";
 
 @Injectable()
-export class OracledbService {
+export class QuestionService {
   constructor(
     private readonly dataSource: DataSource,
     @InjectRepository(RoleQuestion)
     private readonly roleQuestionRepository: Repository<RoleQuestion>,
   ) {}
 
-  async findAll(): Promise<RoleQuestion[]> {
+  async findAllQuestions(): Promise<RoleQuestion[]> {
     return this.roleQuestionRepository.find();
   }
 

@@ -19,12 +19,13 @@ export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
     try {
       const { id, name, emails } = profile;
 
-      return {
+      const user = {
         provider: "google",
         user_id: id,
         email: emails[0].value,
         name: name.givenName,
       };
+      return user;
     } catch (error) {
       return error;
     }

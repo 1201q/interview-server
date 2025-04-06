@@ -1,5 +1,5 @@
 import { IsIn } from "class-validator";
-import { RoleType } from "../types/type";
+import { RoleType } from "../../common/interfaces/common.interface";
 
 export class GetQuestionDto {
   @IsIn(["fe", "be", "android", "ios"])

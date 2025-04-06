@@ -5,11 +5,10 @@ import { AppService } from "./app.service";
 import { ConfigModule } from "@nestjs/config";
 
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { OracledbModule } from "./oracledb/oracledb.module";
+
 import { AuthModule } from "./auth/auth.module";
-import { UserService } from './user/user.service';
-import { UserController } from './user/user.controller';
-import { UserModule } from './user/user.module';
+import { UserModule } from "./user/user.module";
+import { QuestionModule } from "./question/question.module";
 
 @Module({
   imports: [
@@ -24,13 +23,11 @@ import { UserModule } from './user/user.module';
       logging: true,
     }),
 
-    OracledbModule,
-
     AuthModule,
-
     UserModule,
+    QuestionModule,
   ],
-  controllers: [AppController, UserController],
-  providers: [AppService, UserService],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}
