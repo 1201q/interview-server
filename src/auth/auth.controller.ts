@@ -51,10 +51,10 @@ export class AuthController {
 
       res.cookie("accessToken", accessToken, {
         httpOnly: true,
-        secure: this.configService.get("NODE_ENV") === "production",
+        secure: this.configService.get<string>("NODE_ENV") === "production",
         sameSite: "lax",
         domain:
-          this.configService.get("NODE_ENV") === "production"
+          this.configService.get<string>("NODE_ENV") === "production"
             ? ".aiterview.tech"
             : undefined,
         maxAge: 1000 * 60 * 15,
@@ -62,17 +62,17 @@ export class AuthController {
 
       res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
-        secure: this.configService.get("NODE_ENV") === "production",
+        secure: this.configService.get<string>("NODE_ENV") === "production",
         sameSite: "lax",
         domain:
-          this.configService.get("NODE_ENV") === "production"
+          this.configService.get<string>("NODE_ENV") === "production"
             ? ".aiterview.tech"
             : undefined,
         maxAge: 1000 * 60 * 60 * 24 * 7,
       });
 
       const url =
-        this.configService.get("NODE_ENV") === "production"
+        this.configService.get<string>("NODE_ENV") === "production"
           ? `https://aiterview.tech`
           : `http://localhost:3000`;
 
@@ -96,10 +96,10 @@ export class AuthController {
 
     res.cookie("accessToken", newTokens.accessToken, {
       httpOnly: true,
-      secure: this.configService.get("NODE_ENV") === "production",
+      secure: this.configService.get<string>("NODE_ENV") === "production",
       sameSite: "lax",
       domain:
-        this.configService.get("NODE_ENV") === "production"
+        this.configService.get<string>("NODE_ENV") === "production"
           ? ".aiterview.tech"
           : undefined,
       maxAge: 1000 * 60 * 15,
@@ -107,10 +107,10 @@ export class AuthController {
 
     res.cookie("refreshToken", newTokens.refreshToken, {
       httpOnly: true,
-      secure: this.configService.get("NODE_ENV") === "production",
+      secure: this.configService.get<string>("NODE_ENV") === "production",
       sameSite: "lax",
       domain:
-        this.configService.get("NODE_ENV") === "production"
+        this.configService.get<string>("NODE_ENV") === "production"
           ? ".aiterview.tech"
           : undefined,
       maxAge: 1000 * 60 * 60 * 24 * 7,
@@ -124,10 +124,10 @@ export class AuthController {
   async logout(@Req() req: Request, @Res() res: Response) {
     res.clearCookie("accessToken", {
       httpOnly: true,
-      secure: this.configService.get("NODE_ENV") === "production",
+      secure: this.configService.get<string>("NODE_ENV") === "production",
       sameSite: "lax",
       domain:
-        this.configService.get("NODE_ENV") === "production"
+        this.configService.get<string>("NODE_ENV") === "production"
           ? ".aiterview.tech"
           : undefined,
       maxAge: 1000 * 60 * 15,
@@ -136,10 +136,10 @@ export class AuthController {
 
     res.clearCookie("refreshToken", {
       httpOnly: true,
-      secure: this.configService.get("NODE_ENV") === "production",
+      secure: this.configService.get<string>("NODE_ENV") === "production",
       sameSite: "lax",
       domain:
-        this.configService.get("NODE_ENV") === "production"
+        this.configService.get<string>("NODE_ENV") === "production"
           ? ".aiterview.tech"
           : undefined,
       maxAge: 1000 * 60 * 60 * 24 * 7,
