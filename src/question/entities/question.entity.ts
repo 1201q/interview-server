@@ -1,5 +1,5 @@
 import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
-import { RoleType } from "../types/type";
+import { RoleType } from "../../common/interfaces/common.interface";
 
 @Entity({ name: "role_questions" })
 export class RoleQuestion {

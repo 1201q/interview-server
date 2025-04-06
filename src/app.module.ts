@@ -5,7 +5,10 @@ import { AppService } from "./app.service";
 import { ConfigModule } from "@nestjs/config";
 
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { OracledbModule } from "./oracledb/oracledb.module";
+
+import { AuthModule } from "./auth/auth.module";
+import { UserModule } from "./user/user.module";
+import { QuestionModule } from "./question/question.module";
 
 @Module({
   imports: [
@@ -20,7 +23,9 @@ import { OracledbModule } from "./oracledb/oracledb.module";
       logging: true,
     }),
 
-    OracledbModule,
+    AuthModule,
+    UserModule,
+    QuestionModule,
   ],
   controllers: [AppController],
   providers: [AppService],
