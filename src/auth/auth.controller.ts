@@ -131,6 +131,7 @@ export class AuthController {
           ? ".aiterview.tech"
           : undefined,
       maxAge: 1000 * 60 * 15,
+      path: "/",
     });
 
     res.clearCookie("refreshToken", {
@@ -142,6 +143,7 @@ export class AuthController {
           ? ".aiterview.tech"
           : undefined,
       maxAge: 1000 * 60 * 60 * 24 * 7,
+      path: "/",
     });
 
     return res.status(200).json({ message: "로그아웃 성공" });
