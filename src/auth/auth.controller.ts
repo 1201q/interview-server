@@ -52,7 +52,7 @@ export class AuthController {
       res.cookie("accessToken", accessToken, {
         httpOnly: true,
         secure: this.configService.get("NODE_ENV") === "production",
-        sameSite: "strict",
+        sameSite: "lax",
         domain:
           this.configService.get("NODE_ENV") === "production"
             ? ".aiterview.tech"
@@ -63,7 +63,7 @@ export class AuthController {
       res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
         secure: this.configService.get("NODE_ENV") === "production",
-        sameSite: "strict",
+        sameSite: "lax",
         domain:
           this.configService.get("NODE_ENV") === "production"
             ? ".aiterview.tech"
@@ -97,7 +97,7 @@ export class AuthController {
     res.cookie("accessToken", newTokens.accessToken, {
       httpOnly: true,
       secure: this.configService.get("NODE_ENV") === "production",
-      sameSite: "strict",
+      sameSite: "lax",
       domain:
         this.configService.get("NODE_ENV") === "production"
           ? ".aiterview.tech"
@@ -108,7 +108,7 @@ export class AuthController {
     res.cookie("refreshToken", newTokens.refreshToken, {
       httpOnly: true,
       secure: this.configService.get("NODE_ENV") === "production",
-      sameSite: "strict",
+      sameSite: "lax",
       domain:
         this.configService.get("NODE_ENV") === "production"
           ? ".aiterview.tech"
@@ -125,7 +125,7 @@ export class AuthController {
     res.clearCookie("accessToken", {
       httpOnly: true,
       secure: this.configService.get("NODE_ENV") === "production",
-      sameSite: "strict",
+      sameSite: "lax",
       domain:
         this.configService.get("NODE_ENV") === "production"
           ? ".aiterview.tech"
@@ -136,7 +136,7 @@ export class AuthController {
     res.clearCookie("refreshToken", {
       httpOnly: true,
       secure: this.configService.get("NODE_ENV") === "production",
-      sameSite: "strict",
+      sameSite: "lax",
       domain:
         this.configService.get("NODE_ENV") === "production"
           ? ".aiterview.tech"
