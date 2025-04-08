@@ -14,6 +14,7 @@ import { User } from "../common/interfaces/common.interface";
 import { AuthService } from "./auth.service";
 import { UserService } from "src/user/user.service";
 import { ConfigService } from "@nestjs/config";
+import { JwtAuthGuard } from "./guard/jwt-auh.guard";
 
 @Controller("auth")
 export class AuthController {

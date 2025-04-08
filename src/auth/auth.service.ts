@@ -41,4 +41,17 @@ export class AuthService {
       throw new UnauthorizedException(`Invalid refresh token`);
     }
   }
+
+  async decodeAccessToken(
+    accessToken: string,
+  ): Promise<{ id: string; iat: number; exp: number }> {
+    try {
+      const decoded = this.jwtService.verify(accessToken, {
+        secret: this.configService.get("JWT_SECRET"),
+      });
+      return decoded;
+    } catch (error) {
+      throw new UnauthorizedException(`Invalid access token`);
+    }
+  }
 }
