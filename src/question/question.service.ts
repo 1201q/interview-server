@@ -2,8 +2,10 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, Repository } from "typeorm";
 import { RoleQuestion } from "./entities/question.entity";
+
 import { v4 as uuidv4 } from "uuid";
 import { RoleType } from "../common/interfaces/common.interface";
+import { UserQuestion } from "./entities/user.question.entity";
 
 @Injectable()
 export class QuestionService {
@@ -51,6 +53,36 @@ export class QuestionService {
       });
 
       await queryRunner.manager.save(RoleQuestion, newQuestions);
+      await queryRunner.commitTransaction();
+      return newQuestions;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw new Error(`Failed to create new questions: ${error.message}`);
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async createNewUserQuestions(
+    questions: Partial<UserQuestion>[],
+    user_id: string,
+  ) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const newQuestions = questions.map((q) => {
+        const newQuestion = new UserQuestion();
+        newQuestion.question_text = q.question_text;
+        newQuestion.role = q.role;
+        newQuestion.id = uuidv4();
+        newQuestion.user_id = user_id;
+
+        return newQuestion;
+      });
+
+      await queryRunner.manager.save(UserQuestion, newQuestions);
       await queryRunner.commitTransaction();
       return newQuestions;
     } catch (error) {

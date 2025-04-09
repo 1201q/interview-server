@@ -8,12 +8,19 @@ import {
   Req,
   UseGuards,
 } from "@nestjs/common";
-import { createQuestionDto } from "./dtos/crate-question.dto";
+import {
+  CreateQuestionArrayDto,
+  CreateQuestionDto,
+} from "./dtos/crate-question.dto";
 import { GetQuestionDto } from "./dtos/get-question.dto";
 import { RoleQuestion } from "./entities/question.entity";
 import { JwtAuthGuard } from "src/auth/guard/jwt-auh.guard";
 import { Request } from "express";
 import { AuthService } from "src/auth/auth.service";
+import {
+  CreateUserQuestionArrayDto,
+  CreateUserQuestionDto,
+} from "./dtos/create-user-question.dto";
 
 @Controller("question")
 export class QuestionController {
@@ -40,13 +47,14 @@ export class QuestionController {
   }
 
   @Post()
-  async createNewQuestion(@Body() body: createQuestionDto) {
+  async createNewQuestion(@Body() body: CreateQuestionDto) {
     return this.questionService.createNewQuestion(body);
   }
 
   @Post("bulk")
-  async createNewQuestions(@Body() body: createQuestionDto[]) {
-    return this.questionService.createNewQuestions(body);
+  async createNewQuestions(@Body() body: CreateQuestionArrayDto) {
+    const { items } = body;
+    return this.questionService.createNewQuestions(items);
   }
 
   @Get("test")
@@ -56,5 +64,14 @@ export class QuestionController {
 
     console.log(this.authService.decodeAccessToken(req.cookies.accessToken));
     return "test";
+  }
+
+  @Post("add/user")
+  async addUser(@Req() req: Request, @Body() body: CreateUserQuestionArrayDto) {
+    const { items } = body;
+    const token = req.cookies.accessToken as string;
+    const userId = (await this.authService.decodeAccessToken(token)).id;
+
+    return this.questionService.createNewUserQuestions(items, userId);
   }
 }
