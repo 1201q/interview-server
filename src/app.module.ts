@@ -16,7 +16,7 @@ import { QuestionModule } from "./question/question.module";
       password: process.env.DB_PASSWORD,
       connectString: process.env.DB_CONNECTION,
       autoLoadEntities: true,
-      synchronize: true,
+      synchronize: false,
       logging: true,
     }),
     AuthModule,

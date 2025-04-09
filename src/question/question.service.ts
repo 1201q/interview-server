@@ -13,6 +13,9 @@ export class QuestionService {
     private readonly dataSource: DataSource,
     @InjectRepository(RoleQuestion)
     private readonly roleQuestionRepository: Repository<RoleQuestion>,
+
+    @InjectRepository(UserQuestion)
+    private readonly userQuestionRepository: Repository<UserQuestion>,
   ) {}
 
   async findAllQuestions(): Promise<RoleQuestion[]> {
@@ -21,6 +24,10 @@ export class QuestionService {
 
   async getQuestionByRole(role: RoleType): Promise<RoleQuestion[]> {
     return this.roleQuestionRepository.find({ where: { role: role } });
+  }
+
+  async getQuestionByUserId(userId: string): Promise<UserQuestion[]> {
+    return this.userQuestionRepository.find({ where: { user_id: userId } });
   }
 
   async createNewQuestion(question: Partial<RoleQuestion>) {

@@ -17,10 +17,9 @@ import { RoleQuestion } from "./entities/question.entity";
 import { JwtAuthGuard } from "src/auth/guard/jwt-auh.guard";
 import { Request } from "express";
 import { AuthService } from "src/auth/auth.service";
-import {
-  CreateUserQuestionArrayDto,
-  CreateUserQuestionDto,
-} from "./dtos/create-user-question.dto";
+import { CreateUserQuestionArrayDto } from "./dtos/create-user-question.dto";
+import { GetUserQuestionDto } from "./dtos/get-user-question.dto";
+import { UserQuestion } from "./entities/user.question.entity";
 
 @Controller("question")
 export class QuestionController {
@@ -34,6 +33,14 @@ export class QuestionController {
     @Query() query: GetQuestionDto,
   ): Promise<RoleQuestion[]> {
     return this.questionService.getQuestionByRole(query.role);
+  }
+
+  @Get("user")
+  async getUserQuestions(@Req() req: Request): Promise<UserQuestion[]> {
+    const token = req.cookies.accessToken as string;
+    const userId = (await this.authService.decodeAccessToken(token)).id;
+
+    return this.questionService.getQuestionByUserId(userId);
   }
 
   @Get("count")
