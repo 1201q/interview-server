@@ -18,7 +18,7 @@ import { JwtAuthGuard } from "src/auth/guard/jwt-auh.guard";
 import { Request } from "express";
 import { AuthService } from "src/auth/auth.service";
 import { CreateUserQuestionArrayDto } from "./dtos/create-user-question.dto";
-import { GetUserQuestionDto } from "./dtos/get-user-question.dto";
+
 import { UserQuestion } from "./entities/user.question.entity";
 
 @Controller("question")
@@ -74,11 +74,26 @@ export class QuestionController {
   }
 
   @Post("add/user")
-  async addUser(@Req() req: Request, @Body() body: CreateUserQuestionArrayDto) {
+  async addUserCreatedQuestions(
+    @Req() req: Request,
+    @Body() body: CreateUserQuestionArrayDto,
+  ) {
     const { items } = body;
     const token = req.cookies.accessToken as string;
     const userId = (await this.authService.decodeAccessToken(token)).id;
 
     return this.questionService.createNewUserQuestions(items, userId);
+  }
+
+  @Post("delete/user")
+  async deleteUserCreatedQuestions(
+    @Req() req: Request,
+    @Body() body: { items: string[] },
+  ) {
+    const { items } = body;
+    const token = req.cookies.accessToken as string;
+    const userId = (await this.authService.decodeAccessToken(token)).id;
+
+    return this.questionService.deleteUserCreatedQuestions(items, userId);
   }
 }

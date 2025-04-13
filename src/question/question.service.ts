@@ -27,7 +27,11 @@ export class QuestionService {
   }
 
   async getQuestionByUserId(userId: string): Promise<UserQuestion[]> {
-    return this.userQuestionRepository.find({ where: { user_id: userId } });
+    const data = await this.userQuestionRepository.find({
+      where: { user_id: userId },
+    });
+
+    return data;
   }
 
   async createNewQuestion(question: Partial<RoleQuestion>) {
@@ -95,6 +99,29 @@ export class QuestionService {
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw new Error(`Failed to create new questions: ${error.message}`);
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async deleteUserCreatedQuestions(ids: string[], userId: string) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      await queryRunner.manager
+        .createQueryBuilder()
+        .delete()
+        .from(UserQuestion)
+        .where("id IN (:...ids)", { ids })
+        .andWhere("user_id = :userId", { userId })
+        .execute();
+
+      await queryRunner.commitTransaction();
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw new Error(`Failed to delete questions: ${error.message}`);
     } finally {
       await queryRunner.release();
     }
