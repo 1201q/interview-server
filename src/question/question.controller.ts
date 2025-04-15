@@ -96,4 +96,33 @@ export class QuestionController {
 
     return this.questionService.deleteUserCreatedQuestions(items, userId);
   }
+
+  @Get("bookmark")
+  async getBookmarkedQuestions(@Req() req: Request) {
+    const token = req.cookies.accessToken as string;
+    const userId = (await this.authService.decodeAccessToken(token)).id;
+
+    return this.questionService.getBookmarkedQuestions(userId);
+  }
+
+  @Post("bookmark/add")
+  async addBookmark(@Req() req: Request, @Body() body: { questionId: string }) {
+    const { questionId } = body;
+    const token = req.cookies.accessToken as string;
+    const userId = (await this.authService.decodeAccessToken(token)).id;
+
+    return this.questionService.addBookmark(userId, questionId);
+  }
+
+  @Post("bookmark/delete")
+  async deleteBookmark(
+    @Req() req: Request,
+    @Body() body: { questionId: string },
+  ) {
+    const { questionId } = body;
+
+    const token = req.cookies.accessToken as string;
+    const userId = (await this.authService.decodeAccessToken(token)).id;
+    return this.questionService.deleteBookmark(userId, questionId);
+  }
 }
