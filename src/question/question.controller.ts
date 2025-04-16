@@ -13,13 +13,12 @@ import {
   CreateQuestionDto,
 } from "./dtos/crate-question.dto";
 import { GetQuestionDto } from "./dtos/get-question.dto";
-import { RoleQuestion } from "./entities/question.entity";
+
 import { JwtAuthGuard } from "src/auth/guard/jwt-auh.guard";
 import { Request } from "express";
 import { AuthService } from "src/auth/auth.service";
 import { CreateUserQuestionArrayDto } from "./dtos/create-user-question.dto";
-
-import { UserQuestion } from "./entities/user.question.entity";
+import { Question } from "./entities/question.entity";
 
 @Controller("question")
 export class QuestionController {
@@ -29,18 +28,16 @@ export class QuestionController {
   ) {}
 
   @Get()
-  async getAllQuestions(
-    @Query() query: GetQuestionDto,
-  ): Promise<RoleQuestion[]> {
-    return this.questionService.getQuestionByRole(query.role);
+  async getAllQuestions(@Query() query: GetQuestionDto): Promise<Question[]> {
+    return this.questionService.getAdminCreatedQuestionsByRole(query.role);
   }
 
   @Get("user")
-  async getUserQuestions(@Req() req: Request): Promise<UserQuestion[]> {
+  async getUserQuestions(@Req() req: Request): Promise<Question[]> {
     const token = req.cookies.accessToken as string;
     const userId = (await this.authService.decodeAccessToken(token)).id;
 
-    return this.questionService.getQuestionByUserId(userId);
+    return this.questionService.getUserCreatedQuestionsByUserId(userId);
   }
 
   @Get("count")
@@ -55,13 +52,13 @@ export class QuestionController {
 
   @Post()
   async createNewQuestion(@Body() body: CreateQuestionDto) {
-    return this.questionService.createNewQuestion(body);
+    return this.questionService.createNewAdminQuestion(body);
   }
 
   @Post("bulk")
   async createNewQuestions(@Body() body: CreateQuestionArrayDto) {
     const { items } = body;
-    return this.questionService.createNewQuestions(items);
+    return this.questionService.createNewAdminQuestions(items);
   }
 
   @Get("test")
