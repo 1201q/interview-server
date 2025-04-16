@@ -108,15 +108,6 @@ export class QuestionService {
     await queryRunner.startTransaction();
 
     try {
-      // 북마크 삭제
-      await queryRunner.manager
-        .createQueryBuilder()
-        .delete()
-        .from(BookmarkedQuestion)
-        .where("question_id IN (:...ids)", { ids })
-        .andWhere("user_id = :userId", { userId })
-        .execute();
-
       // 질문 삭제
       await queryRunner.manager
         .createQueryBuilder()
@@ -159,9 +150,12 @@ export class QuestionService {
 
   // 북마크
   async getBookmarkedQuestions(userId: string) {
-    return this.dataSource.getRepository(BookmarkedQuestion).find({
+    const data = await this.dataSource.getRepository(BookmarkedQuestion).find({
       where: { user_id: userId },
+      relations: ["question"],
     });
+
+    return data;
   }
 
   async addBookmark(userId: string, questionId: string) {
