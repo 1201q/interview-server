@@ -1,5 +1,9 @@
-import { QuestionType } from "src/common/interfaces/common.interface";
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+} from "typeorm";
 
 @Entity({ name: "bookmarked_questions" })
 export class BookmarkedQuestion {
@@ -11,4 +15,7 @@ export class BookmarkedQuestion {
 
   @Column()
   question_id: string;
+
+  @CreateDateColumn({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })
+  created_at: Date;
 }

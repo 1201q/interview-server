@@ -111,6 +111,16 @@ export class QuestionService {
     await queryRunner.startTransaction();
 
     try {
+      // 북마크 삭제
+      await queryRunner.manager
+        .createQueryBuilder()
+        .delete()
+        .from(BookmarkedQuestion)
+        .where("question_id IN (:...ids)", { ids })
+        .andWhere("user_id = :userId", { userId })
+        .execute();
+
+      // 질문 삭제
       await queryRunner.manager
         .createQueryBuilder()
         .delete()
