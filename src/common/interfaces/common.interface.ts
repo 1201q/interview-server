@@ -7,3 +7,10 @@ export interface User {
   user_id: string;
   provider: string;
 }
+
+export type GenerateQuestionType =
+  | "concept"
+  | "comparison"
+  | "system_design"
+  | "implementation"
+  | "experience";

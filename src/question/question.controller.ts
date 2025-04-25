@@ -19,12 +19,15 @@ import { Request } from "express";
 import { AuthService } from "src/auth/auth.service";
 import { CreateUserQuestionArrayDto } from "./dtos/create-user-question.dto";
 import { Question } from "./entities/question.entity";
+import { GenerateQuestionFromGptDto } from "./dtos/generate-question.dto";
+import { OpenaiService } from "./openai.service";
 
 @Controller("question")
 export class QuestionController {
   constructor(
     private readonly questionService: QuestionService,
     private readonly authService: AuthService,
+    private readonly openaiService: OpenaiService,
   ) {}
 
   @Get()
@@ -121,5 +124,12 @@ export class QuestionController {
     const token = req.cookies.accessToken as string;
     const userId = (await this.authService.decodeAccessToken(token)).id;
     return this.questionService.deleteBookmark(userId, questionId);
+  }
+
+  @Post("ai/generate")
+  async generateQuestionFromGpt(@Body() body: GenerateQuestionFromGptDto) {
+    const questions = await this.openaiService.generateInterviewQuestions(body);
+
+    return { questions: questions };
   }
 }

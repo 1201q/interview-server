@@ -18,7 +18,11 @@ export class QuestionService {
   ) {}
 
   async getAdminCreatedQuestionsByRole(role: RoleType): Promise<Question[]> {
-    return this.questionRepository.find({ where: { role: role } });
+    if (role) {
+      return this.questionRepository.find({ where: { role: role } });
+    }
+
+    return this.questionRepository.find({ where: { creator_type: "admin" } });
   }
 
   async getUserCreatedQuestionsByUserId(userId: string): Promise<Question[]> {
