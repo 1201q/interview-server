@@ -27,7 +27,15 @@ export class QuestionService {
 
   async getUserCreatedQuestionsByUserId(userId: string): Promise<Question[]> {
     const data = await this.questionRepository.find({
-      where: { user_id: userId },
+      where: { user_id: userId, role: "user" },
+    });
+
+    return data;
+  }
+
+  async getAiGeneratedQuestionsByUserId(userId: string): Promise<Question[]> {
+    const data = await this.questionRepository.find({
+      where: { user_id: userId, role: "ai" },
     });
 
     return data;
@@ -186,5 +194,35 @@ export class QuestionService {
       user_id: userId,
       question_id: questionId,
     });
+  }
+
+  // ai
+
+  async createAiQuestions(questions: Partial<Question>[], user_id: string) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const newQuestions = questions.map((q) => {
+        const newQuestion = new Question();
+        newQuestion.question_text = q.question_text;
+        newQuestion.role = "ai";
+        newQuestion.creator_type = "user";
+        newQuestion.id = uuidv4();
+        newQuestion.user_id = user_id;
+
+        return newQuestion;
+      });
+
+      await queryRunner.manager.save(Question, newQuestions);
+      await queryRunner.commitTransaction();
+      return newQuestions;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw new Error(`Failed to create new questions: ${error.message}`);
+    } finally {
+      await queryRunner.release();
+    }
   }
 }

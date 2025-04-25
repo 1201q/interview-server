@@ -21,6 +21,7 @@ import { CreateUserQuestionArrayDto } from "./dtos/create-user-question.dto";
 import { Question } from "./entities/question.entity";
 import { GenerateQuestionFromGptDto } from "./dtos/generate-question.dto";
 import { OpenaiService } from "./openai.service";
+import { CreateAiQuestionArrayDto } from "./dtos/create-ai-question.dto";
 
 @Controller("question")
 export class QuestionController {
@@ -41,6 +42,14 @@ export class QuestionController {
     const userId = (await this.authService.decodeAccessToken(token)).id;
 
     return this.questionService.getUserCreatedQuestionsByUserId(userId);
+  }
+
+  @Get("ai")
+  async getAiQuestions(@Req() req: Request): Promise<Question[]> {
+    const token = req.cookies.accessToken as string;
+    const userId = (await this.authService.decodeAccessToken(token)).id;
+
+    return this.questionService.getAiGeneratedQuestionsByUserId(userId);
   }
 
   @Get("count")
@@ -83,6 +92,18 @@ export class QuestionController {
     const userId = (await this.authService.decodeAccessToken(token)).id;
 
     return this.questionService.createNewUserQuestions(items, userId);
+  }
+
+  @Post("add/ai")
+  async addAiGeneratedQuestions(
+    @Req() req: Request,
+    @Body() body: CreateAiQuestionArrayDto,
+  ) {
+    const { items } = body;
+    const token = req.cookies.accessToken as string;
+    const userId = (await this.authService.decodeAccessToken(token)).id;
+
+    return this.questionService.createAiQuestions(items, userId);
   }
 
   @Post("delete/user")
