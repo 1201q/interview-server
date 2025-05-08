@@ -7,6 +7,8 @@ import { AuthModule } from "./auth/auth.module";
 import { UserModule } from "./user/user.module";
 import { QuestionModule } from "./question/question.module";
 import { SttModule } from "./stt/stt.module";
+import { RedisModule } from "./common/redis/redis.module";
+import { InterviewModule } from "./interview/interview.module";
 
 @Module({
   imports: [
@@ -24,6 +26,8 @@ import { SttModule } from "./stt/stt.module";
     UserModule,
     QuestionModule,
     SttModule,
+    RedisModule,
+    InterviewModule,
   ],
   controllers: [AppController],
   providers: [AppService],

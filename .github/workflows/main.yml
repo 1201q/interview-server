@@ -88,6 +88,8 @@ jobs:
             echo "GOOGLE_OAUTH_CALLBACK_URL=${{secrets.GOOGLE_OAUTH_CALLBACK_URL}}" >> .env
             echo "JWT_SECRET=${{secrets.JWT_SECRET}}" >> .env
             echo "JWT_REFRESH_SECRET=${{secrets.JWT_REFRESH_SECRET}}" >> .env
+            echo "REDIS_HOST=${{ secrets.REDIS_HOST }}" >> .env
+            echo "REDIS_PORT=${{ secrets.REDIS_PORT }}" >> .env
             echo "🚀 배포 시작..."
             docker-compose down
             docker-compose pull
