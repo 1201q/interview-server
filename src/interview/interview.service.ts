@@ -77,15 +77,6 @@ export class InterviewService {
     });
   }
 
-  async getActiveSessionByUserId(userId: string) {
-    return this.sessionRepository.findOne({
-      where: {
-        user_id: userId,
-        status: In(["pending", "ready", "in_progress"]),
-      },
-    });
-  }
-
   async getActiveSessionBySessionId(userId: string, sessionId: string) {
     return this.sessionRepository.findOne({
       where: {
@@ -96,10 +87,98 @@ export class InterviewService {
     });
   }
 
-  async expireSession(sessionId: string) {
+  async expireSession(userId: string, sessionId: string) {
     await this.sessionRepository.update(
-      { id: sessionId },
+      { id: sessionId, user_id: userId },
       { status: "expired" },
     );
+  }
+
+  async readySession(userId: string, sessionId: string) {
+    return this.sessionRepository.update(
+      { id: sessionId, user_id: userId },
+      { status: "ready" },
+    );
+  }
+
+  // 첫번째 질문의 상태를 answering으로 바꿈.
+  // 세션의 상태를 in_progress로 바꿈.
+  async startFirstQuestion(userId: string, sessionId: string) {
+    const session = await this.sessionRepository.findOne({
+      where: { id: sessionId, user_id: userId },
+      relations: ["questions"],
+      order: {
+        questions: {
+          order: "ASC",
+        },
+      },
+    });
+
+    if (!session) throw new Error("세션 검색 실패");
+
+    session.status = "in_progress";
+    await this.sessionRepository.save(session);
+
+    const firstQuestion = session.questions[0];
+    firstQuestion.status = "answering";
+    firstQuestion.started_at = new Date();
+
+    await this.sessionQuestionRepository.save(firstQuestion);
+  }
+
+  async submitAnswer(userId: string, sessionId: string, order: number) {
+    const currentQuestion = await this.sessionQuestionRepository.findOne({
+      where: {
+        session: { id: sessionId, user_id: userId },
+        order,
+      },
+      relations: ["session"],
+    });
+
+    if (!currentQuestion) throw new Error("질문 검색 실패");
+
+    currentQuestion.status = "submitted";
+    currentQuestion.ended_at = new Date();
+    await this.sessionQuestionRepository.save(currentQuestion);
+
+    const nextQuestion = await this.sessionQuestionRepository.findOne({
+      where: {
+        session: { id: sessionId, user_id: userId },
+        order: order + 1,
+      },
+    });
+
+    if (!nextQuestion) {
+      await this.sessionRepository.update(
+        { id: sessionId },
+        { status: "completed" },
+      );
+
+      return { isLastQuestion: true };
+    } else {
+      nextQuestion.status = "ready";
+      await this.sessionQuestionRepository.save(nextQuestion);
+
+      return { isLastQuestion: false };
+    }
+  }
+
+  async startAnswer(userId: string, sessionId: string, order: number) {
+    const currentQuestion = await this.sessionQuestionRepository.findOne({
+      where: {
+        session: { id: sessionId, user_id: userId },
+        order,
+      },
+      relations: ["session"],
+    });
+
+    if (!currentQuestion) throw new Error("질문 검색 실패");
+    if (currentQuestion.status !== "ready") {
+      throw new Error("해당 질문은 아직 시작할 수 없습니다.");
+    }
+
+    currentQuestion.status = "answering";
+    currentQuestion.ended_at = new Date();
+    await this.sessionQuestionRepository.save(currentQuestion);
   }
 }

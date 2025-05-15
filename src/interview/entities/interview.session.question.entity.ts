@@ -25,7 +25,7 @@ export class InterviewSessionQuestion {
   order: number;
 
   @Column({ default: "waiting" })
-  status: "waiting" | "answering" | "submitted";
+  status: "waiting" | "ready" | "answering" | "submitted";
 
   @Column({ type: "timestamp", nullable: true })
   started_at: Date;
