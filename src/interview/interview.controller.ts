@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Post, Req, Res } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Post,
+  Req,
+  Res,
+} from "@nestjs/common";
 import { InterviewService } from "./interview.service";
 import { AuthService } from "src/auth/auth.service";
 import { InterviewSession } from "./entities/interview.session.entity";
@@ -32,16 +41,22 @@ export class InterviewController {
     return res.status(200).json({ session });
   }
 
-  @Get("session/status")
-  async getActiveSession(@Req() req: Request, @Res() res: Response) {
+  @Get("session/:id")
+  async getActiveSession(@Req() req: Request, @Param("id") sessionId: string) {
     const token = req.cookies.accessToken as string;
     const userId = (await this.authService.decodeAccessToken(token)).id;
 
-    const session =
-      await this.interviewService.getActiveSessionByUserId(userId);
+    const session = await this.interviewService.getActiveSessionBySessionId(
+      userId,
+      sessionId,
+    );
 
-    console.log(session.status);
+    if (!session) {
+      throw new NotFoundException(
+        "인터뷰 세션이 존재하지 않거나 접근 권한이 없습니다.",
+      );
+    }
 
-    return session.status;
+    return session;
   }
 }

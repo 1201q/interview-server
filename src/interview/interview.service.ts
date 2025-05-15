@@ -86,6 +86,16 @@ export class InterviewService {
     });
   }
 
+  async getActiveSessionBySessionId(userId: string, sessionId: string) {
+    return this.sessionRepository.findOne({
+      where: {
+        user_id: userId,
+        id: sessionId,
+      },
+      relations: ["questions", "questions.question"],
+    });
+  }
+
   async expireSession(sessionId: string) {
     await this.sessionRepository.update(
       { id: sessionId },
