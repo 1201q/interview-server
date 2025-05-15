@@ -76,4 +76,20 @@ export class InterviewService {
       },
     });
   }
+
+  async getActiveSessionByUserId(userId: string) {
+    return this.sessionRepository.findOne({
+      where: {
+        user_id: userId,
+        status: In(["pending", "ready", "in_progress"]),
+      },
+    });
+  }
+
+  async expireSession(sessionId: string) {
+    await this.sessionRepository.update(
+      { id: sessionId },
+      { status: "expired" },
+    );
+  }
 }
