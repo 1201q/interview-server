@@ -84,6 +84,11 @@ export class InterviewService {
         id: sessionId,
       },
       relations: ["questions", "questions.question"],
+      order: {
+        questions: {
+          order: "ASC",
+        },
+      },
     });
   }
 

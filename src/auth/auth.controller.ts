@@ -58,7 +58,7 @@ export class AuthController {
           this.configService.get<string>("NODE_ENV") === "production"
             ? ".aiterview.tech"
             : undefined,
-        maxAge: 1000 * 60 * 15,
+        maxAge: 1000 * 60 * 120,
       });
 
       res.cookie("refreshToken", refreshToken, {
@@ -103,7 +103,7 @@ export class AuthController {
         this.configService.get<string>("NODE_ENV") === "production"
           ? ".aiterview.tech"
           : undefined,
-      maxAge: 1000 * 60 * 15,
+      maxAge: 1000 * 60 * 120,
     });
 
     res.cookie("refreshToken", newTokens.refreshToken, {
@@ -131,7 +131,7 @@ export class AuthController {
         this.configService.get<string>("NODE_ENV") === "production"
           ? ".aiterview.tech"
           : undefined,
-      maxAge: 1000 * 60 * 15,
+      maxAge: 1000 * 60 * 120,
       path: "/",
     });
 
