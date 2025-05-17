@@ -18,6 +18,13 @@ async function bootstrap() {
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization"],
     });
+  } else {
+    app.enableCors({
+      origin: ["https://aiterview.tech", "https://www.aiterview.tech"],
+      credentials: true,
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+    });
   }
 
   const config = new DocumentBuilder()
