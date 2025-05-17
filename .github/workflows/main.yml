@@ -35,10 +35,12 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/interview:arm64
             ${{ secrets.DOCKERHUB_USERNAME }}/interview:latest
-          build-args: |
-            BUILDKIT_INLINE_CACHE=1
-          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/interview:cache
-          cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/interview:cache,mode=max
+          cache-from: |
+            type=gha
+            type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/interview:cache
+          cache-to: |
+            type=gha,mode=max
+            type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/interview:cache,mode=max
 
   deploy:
     runs-on: ubuntu-latest

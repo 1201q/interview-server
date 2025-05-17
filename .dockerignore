@@ -1,4 +1,15 @@
 .git
-*Dockerfile*
+.gitignore
+.vscode
+*.log
+
 node_modules
 dist
+npm-debug.log
+yarn.lock
+
+Dockerfile*
+docker-compose.yml
+
+.env
+.env.*

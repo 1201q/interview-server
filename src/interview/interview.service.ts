@@ -1,7 +1,5 @@
-import { BadRequestException, Inject, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-
-import { v4 as uuidv4 } from "uuid";
 
 import { InterviewSession } from "./entities/interview.session.entity";
 import { In, Repository } from "typeorm";
