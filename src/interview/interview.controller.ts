@@ -92,7 +92,10 @@ export class InterviewController {
   }
 
   @Patch("session/start")
-  async startSession(@Req() req: Request, @Body() body: InterviewSessionDto) {
+  async startCurrentSession(
+    @Req() req: Request,
+    @Body() body: InterviewSessionDto,
+  ) {
     const { session_id } = body;
     const token = req.cookies.accessToken as string;
     const userId = (await this.authService.decodeAccessToken(token)).id;
@@ -108,11 +111,11 @@ export class InterviewController {
       );
     }
 
-    await this.interviewService.startFirstQuestion(userId, session_id);
+    await this.interviewService.startInterviewSession(userId, session_id);
 
     return {
       message:
-        "세션이 in_progress 상태로 변경되었습니다. 첫번째 질문을 시작합니다.",
+        "세션이 in_progress 상태로 변경되었습니다. 첫번째 질문을 ready로 변경합니다.",
     };
   }
 

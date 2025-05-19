@@ -104,9 +104,9 @@ export class InterviewService {
     );
   }
 
-  // 첫번째 질문의 상태를 answering으로 바꿈.
   // 세션의 상태를 in_progress로 바꿈.
-  async startFirstQuestion(userId: string, sessionId: string) {
+  // 첫번째 질문의 상태를 ready로 바꿈.
+  async startInterviewSession(userId: string, sessionId: string) {
     const session = await this.sessionRepository.findOne({
       where: { id: sessionId, user_id: userId },
       relations: ["questions"],
@@ -123,10 +123,28 @@ export class InterviewService {
     await this.sessionRepository.save(session);
 
     const firstQuestion = session.questions[0];
-    firstQuestion.status = "answering";
-    firstQuestion.started_at = new Date();
+    firstQuestion.status = "ready";
 
     await this.sessionQuestionRepository.save(firstQuestion);
+  }
+
+  async startAnswer(userId: string, sessionId: string, order: number) {
+    const currentQuestion = await this.sessionQuestionRepository.findOne({
+      where: {
+        session: { id: sessionId, user_id: userId },
+        order,
+      },
+      relations: ["session"],
+    });
+
+    if (!currentQuestion) throw new Error("질문 검색 실패");
+    if (currentQuestion.status !== "ready") {
+      throw new Error("해당 질문은 아직 시작할 수 없습니다.");
+    }
+
+    currentQuestion.status = "answering";
+    currentQuestion.started_at = new Date();
+    await this.sessionQuestionRepository.save(currentQuestion);
   }
 
   async submitAnswer(userId: string, sessionId: string, order: number) {
@@ -164,24 +182,5 @@ export class InterviewService {
 
       return { isLastQuestion: false };
     }
-  }
-
-  async startAnswer(userId: string, sessionId: string, order: number) {
-    const currentQuestion = await this.sessionQuestionRepository.findOne({
-      where: {
-        session: { id: sessionId, user_id: userId },
-        order,
-      },
-      relations: ["session"],
-    });
-
-    if (!currentQuestion) throw new Error("질문 검색 실패");
-    if (currentQuestion.status !== "ready") {
-      throw new Error("해당 질문은 아직 시작할 수 없습니다.");
-    }
-
-    currentQuestion.status = "answering";
-    currentQuestion.ended_at = new Date();
-    await this.sessionQuestionRepository.save(currentQuestion);
   }
 }

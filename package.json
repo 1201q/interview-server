@@ -37,6 +37,8 @@
     "cookie-parser": "^1.4.7",
     "ioredis": "^5.6.1",
     "multer": "^1.4.5-lts.2",
+    "oci-common": "^2.109.0",
+    "oci-objectstorage": "^2.109.0",
     "openai": "^4.96.0",
     "oracledb": "^6.8.0",
     "passport": "^0.7.0",
