@@ -20,7 +20,7 @@ import { InterviewModule } from "./interview/interview.module";
       connectString: process.env.DB_CONNECTION,
       autoLoadEntities: true,
       synchronize: false,
-      logging: true,
+      logging: false,
     }),
     AuthModule,
     UserModule,

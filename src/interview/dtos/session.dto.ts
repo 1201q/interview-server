@@ -10,6 +10,7 @@ export class InterviewSessionWithOrderDto {
   @IsUUID()
   session_id: string;
 
+  @Type(() => Number)
   @IsNumber()
   order: number;
 }

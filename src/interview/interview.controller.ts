@@ -8,6 +8,8 @@ import {
   Post,
   Req,
   Res,
+  UploadedFile,
+  UseInterceptors,
 } from "@nestjs/common";
 import { InterviewService } from "./interview.service";
 import { AuthService } from "src/auth/auth.service";
@@ -19,6 +21,7 @@ import {
   InterviewSessionDto,
   InterviewSessionWithOrderDto,
 } from "./dtos/session.dto";
+import { FileInterceptor } from "@nestjs/platform-express";
 
 @Controller("interview")
 export class InterviewController {
@@ -120,8 +123,10 @@ export class InterviewController {
   }
 
   @Patch("session/question/submit")
+  @UseInterceptors(FileInterceptor("audio"))
   async submitAnswer(
     @Req() req: Request,
+    @UploadedFile() audio: Express.Multer.File,
     @Body() body: InterviewSessionWithOrderDto,
   ) {
     const { session_id, order } = body;
@@ -138,6 +143,8 @@ export class InterviewController {
         "인터뷰 세션이 존재하지 않거나 접근 권한이 없습니다.",
       );
     }
+
+    console.log("filename:", audio);
 
     const success = await this.interviewService.submitAnswer(
       userId,
