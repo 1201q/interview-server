@@ -147,7 +147,12 @@ export class InterviewService {
     await this.sessionQuestionRepository.save(currentQuestion);
   }
 
-  async submitAnswer(userId: string, sessionId: string, order: number) {
+  async submitAnswer(
+    userId: string,
+    sessionId: string,
+    order: number,
+    audioPath: string,
+  ) {
     const currentQuestion = await this.sessionQuestionRepository.findOne({
       where: {
         session: { id: sessionId, user_id: userId },
@@ -160,6 +165,8 @@ export class InterviewService {
 
     currentQuestion.status = "submitted";
     currentQuestion.ended_at = new Date();
+    currentQuestion.audio_path = audioPath;
+
     await this.sessionQuestionRepository.save(currentQuestion);
 
     const nextQuestion = await this.sessionQuestionRepository.findOne({

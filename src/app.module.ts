@@ -9,6 +9,7 @@ import { QuestionModule } from "./question/question.module";
 import { SttModule } from "./stt/stt.module";
 import { RedisModule } from "./common/redis/redis.module";
 import { InterviewModule } from "./interview/interview.module";
+import { OciUploadModule } from "./oci-upload/oci-upload.module";
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { InterviewModule } from "./interview/interview.module";
     SttModule,
     RedisModule,
     InterviewModule,
+    OciUploadModule,
   ],
   controllers: [AppController],
   providers: [AppService],

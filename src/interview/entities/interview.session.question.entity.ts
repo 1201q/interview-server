@@ -35,4 +35,7 @@ export class InterviewSessionQuestion {
 
   @CreateDateColumn()
   created_at: Date;
+
+  @Column({ type: "varchar", nullable: true })
+  audio_path: string;
 }

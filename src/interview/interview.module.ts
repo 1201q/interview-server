@@ -5,8 +5,9 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { InterviewSession } from "./entities/interview.session.entity";
 import { InterviewSessionQuestion } from "./entities/interview.session.question.entity";
 import { Question } from "src/question/entities/question.entity";
-import { AuthService } from "src/auth/auth.service";
 import { AuthModule } from "src/auth/auth.module";
+import { OciUploadModule } from "src/oci-upload/oci-upload.module";
+import { OciUploadService } from "src/oci-upload/oci-upload.service";
 
 @Module({
   imports: [
@@ -16,8 +17,9 @@ import { AuthModule } from "src/auth/auth.module";
       Question,
     ]),
     AuthModule,
+    OciUploadModule,
   ],
-  providers: [InterviewService],
+  providers: [InterviewService, OciUploadService],
   controllers: [InterviewController],
 })
 export class InterviewModule {}
