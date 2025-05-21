@@ -128,6 +128,13 @@ export class InterviewService {
     await this.sessionQuestionRepository.save(firstQuestion);
   }
 
+  async completeInterviewSession(userId: string, sessionId: string) {
+    await this.sessionRepository.update(
+      { id: sessionId, user_id: userId },
+      { status: "completed" },
+    );
+  }
+
   async startAnswer(userId: string, sessionId: string, order: number) {
     const currentQuestion = await this.sessionQuestionRepository.findOne({
       where: {

@@ -97,10 +97,7 @@ export class InterviewController {
   }
 
   @Patch("session/start")
-  async startCurrentSession(
-    @Req() req: Request,
-    @Body() body: InterviewSessionDto,
-  ) {
+  async startSession(@Req() req: Request, @Body() body: InterviewSessionDto) {
     const { session_id } = body;
     const token = req.cookies.accessToken as string;
     const userId = (await this.authService.decodeAccessToken(token)).id;
@@ -121,6 +118,33 @@ export class InterviewController {
     return {
       message:
         "세션이 in_progress 상태로 변경되었습니다. 첫번째 질문을 ready로 변경합니다.",
+    };
+  }
+
+  @Patch("session/complete")
+  async completeSession(
+    @Req() req: Request,
+    @Body() body: InterviewSessionDto,
+  ) {
+    const { session_id } = body;
+    const token = req.cookies.accessToken as string;
+    const userId = (await this.authService.decodeAccessToken(token)).id;
+
+    const session = await this.interviewService.getActiveSessionBySessionId(
+      userId,
+      session_id,
+    );
+
+    if (!session) {
+      throw new NotFoundException(
+        "인터뷰 세션이 존재하지 않거나 접근 권한이 없습니다.",
+      );
+    }
+
+    await this.interviewService.completeInterviewSession(userId, session_id);
+
+    return {
+      message: "세션이 completed 상태로 변경되었습니다.",
     };
   }
 
