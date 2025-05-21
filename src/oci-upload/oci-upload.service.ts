@@ -21,7 +21,7 @@ export class OciUploadService implements OnModuleInit {
       this.configService.get("OCI_TENANCY_OCID"),
       this.configService.get("OCI_USER_OCID"),
       this.configService.get("OCI_FINGERPRINT"),
-      this.configService.get("OCI_PRIVATE_KEY"),
+      this.configService.get("OCI_PRIVATE_KEY").replace(/\\n/g, "\n"),
       null,
       region,
     );
