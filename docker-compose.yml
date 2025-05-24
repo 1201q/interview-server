@@ -14,20 +14,6 @@ services:
     environment:
       - TZ=Asia/Seoul
     platform: linux/arm64
-  ml-server:
-    build:
-      context: ./ml-server
-      dockerfile: Dockerfile
-    container_name: ml-server
-    restart: always
-    networks:
-      - app-network
-    env_file:
-      - ./ml-server/.env
-    ports:
-      - "5000:5000"
-    platform: linux/arm64
-
   nginx:
     image: nginx:latest
     container_name: nginx
