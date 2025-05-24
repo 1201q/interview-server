@@ -1,0 +1,30 @@
+name: ml-server
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ml-server/**"
+
+jobs:
+  deploy-ml:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy Python ML container
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd /home/ubuntu/interview
+            echo "🐍 ML 서버 빌드"
+            echo "NESTJS_URL=${{ secrets.NESTJS_URL }}" > ml-server/.env
+            docker-compose build ml-server
+            docker-compose restart ml-server
+            echo "✅ ML 서버 배포 완료!"

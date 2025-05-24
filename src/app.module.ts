@@ -21,7 +21,7 @@ import { OciUploadModule } from "./oci-upload/oci-upload.module";
       connectString: process.env.DB_CONNECTION,
       autoLoadEntities: true,
       synchronize: false,
-      logging: false,
+      logging: true,
     }),
     AuthModule,
     UserModule,

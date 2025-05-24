@@ -25,9 +25,10 @@ export class InterviewService {
   ) {
     const questionIds = questions.map((q) => q.id);
 
-    if (questions.length < 5 || questions.length > 15) {
+    // 임시
+    if (questions.length < 1 || questions.length > 15) {
       throw new BadRequestException(
-        "질문 개수는 5개 이상 15개 이하여야 합니다.",
+        "질문 개수는 1개 이상 15개 이하여야 합니다.",
       );
     }
 
