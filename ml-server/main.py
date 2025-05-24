@@ -1,20 +1,15 @@
-from flask import Flask, request, jsonify
-import requests
-from datetime import datetime
+from flask import Flask
+from dotenv import load_dotenv
+import os
+
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
 app = Flask(__name__)
 
-@app.route('/analyze', methods=['POST'])
-def analyze():
-  data = request.json
-  print(f"받은 데이터 : {data}")
-
-  nestjs_url = "http://interview:8000/api/ml-callback"
-  try:
-    res = requests.post(nestjs_url, json=data)
-    return jsonify({"status" : "ok", "response" : res.json()})
-  except Exception as e:
-    return jsonify({"status" : "fail", "error" : str(e)}), 500
+@app.route('/')
+def hello():
+  py_test = os.getenv("PY_TEST", "값 없음")
+  return f'PY_TEST 환경변수 값: {py_test}'
   
 
 if __name__ == "__main__":

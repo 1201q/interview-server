@@ -5,6 +5,7 @@ on:
     branches: ["main"]
     paths:
       - "**"
+      - "!ml-server/**"
 
 jobs:
   build-and-push-arm64:

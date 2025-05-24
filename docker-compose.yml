@@ -15,6 +15,20 @@ services:
       - TZ=Asia/Seoul
     platform: linux/arm64
 
+  ml-server:
+    image: 1201q/ml-server:latest
+    container_name: ml-server
+    restart: always
+    expose:
+      - "5000"
+    env_file:
+      - ml-server/.env
+    networks:
+      - app-network
+    environment:
+      - TZ=Asia/Seoul
+    platform: linux/arm64
+
   nginx:
     image: nginx:latest
     container_name: nginx
@@ -27,6 +41,7 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf
     depends_on:
       - app
+      - ml-server
     networks:
       - app-network
     environment:
