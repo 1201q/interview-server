@@ -11,13 +11,6 @@ export class AppController {
 
   @Get()
   getHello(): string {
-    const key = this.configService.get("OCI_PRIVATE_KEY").replace(/\\n/g, "\n");
-
-    const rawKey = process.env.OCI_PRIVATE_KEY;
-    const privateKey = rawKey?.replace(/\\n/g, "\n").replaceAll(/\\n/g, "");
-
-    console.log(key);
-
-    return key;
+    return "1";
   }
 }
