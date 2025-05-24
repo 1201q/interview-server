@@ -12,6 +12,7 @@ services:
     env_file:
       - .env
     environment:
+      - ML_SERVER_URL=http://ml-server:5000
       - TZ=Asia/Seoul
     platform: linux/arm64
 
