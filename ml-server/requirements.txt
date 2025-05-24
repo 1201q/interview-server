@@ -1,4 +1,11 @@
 flask
 requests
-python-dotenv
 gunicorn
+python-dotenv
+librosa
+pydub
+numpy
+praat-parselmouth
+ffmpeg-python
+scipy
+soundfile
