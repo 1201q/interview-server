@@ -1,7 +1,7 @@
 import librosa
 from pydub import AudioSegment, silence
 import numpy as np
-import parselmouth
+# import parselmouth
 
 # 어절 수 계산
 def get_count_words(text: str):
@@ -39,16 +39,16 @@ def get_silence_stats(file_path: str):
     return int(count), float(round(total_sec, 2))
 
 # 피치 분석
-def get_pitch_features(file_path: str):
-    sound = parselmouth.Sound(file_path)
-    pitch = sound.to_pitch(time_step=0.01, pitch_floor=75, pitch_ceiling=500)
-    pitches = pitch.selected_array['frequency']
-    valid_pitches = [p for p in pitches if p > 0]
+# def get_pitch_features(file_path: str):
+#     sound = parselmouth.Sound(file_path)
+#     pitch = sound.to_pitch(time_step=0.01, pitch_floor=75, pitch_ceiling=500)
+#     pitches = pitch.selected_array['frequency']
+#     valid_pitches = [p for p in pitches if p > 0]
 
-    avg = float(np.mean(valid_pitches))
-    min_val = float(np.min(valid_pitches))
-    max_val = float(np.max(valid_pitches))
-    std = float(np.std(valid_pitches))
-    pitch_range = float(max_val - min_val)
+#     avg = float(np.mean(valid_pitches))
+#     min_val = float(np.min(valid_pitches))
+#     max_val = float(np.max(valid_pitches))
+#     std = float(np.std(valid_pitches))
+#     pitch_range = float(max_val - min_val)
 
-    return avg, min_val, max_val, std, pitch_range
+#     return avg, min_val, max_val, std, pitch_range

@@ -11,5 +11,5 @@ def analyze_audio(wav_path:str, text:str, duration:float):
     "avg_volume_dbfs" : get_avg_volume_dBFS(wav_path),
     "silence_count" : get_silence_stats(wav_path)[0],
     "silence_total_sec" : get_silence_stats(wav_path)[1],
-    "pitch" : get_pitch_features(wav_path)
+    # "pitch" : get_pitch_features(wav_path)
   }
