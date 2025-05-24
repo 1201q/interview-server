@@ -71,5 +71,8 @@ jobs:
           script: |
             cd /home/ubuntu/interview
             echo "PY_TEST=${{ secrets.PY_TEST }}" >> .env
+
+            docker-compose down --remove-orphans
+            docker system prune -af
             docker-compose pull ml-server
             docker-compose up -d --build ml-server

@@ -98,6 +98,7 @@ jobs:
             echo "OCI_PRIVATE_KEY=${{secrets.OCI_PRIVATE_KEY}}" >> .env
             echo "OCI_REGION=${{ secrets.OCI_REGION }}" >> .env
             echo "OCI_BUCKET_NAME=${{ secrets.OCI_BUCKET_NAME }}" >> .env
+            echo "PY_TEST=${{ secrets.PY_TEST }}" >> .env
 
             echo "🚀 배포 시작..."
             docker-compose down
