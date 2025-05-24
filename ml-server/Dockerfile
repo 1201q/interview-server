@@ -10,8 +10,12 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     libsndfile1 \
     libasound2 \
-    libffi-dev \
     libglib2.0-0 \
+    libffi-dev \
+    build-essential \
+    cmake \
+    ninja-build \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
