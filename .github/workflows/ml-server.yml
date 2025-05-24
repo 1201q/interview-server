@@ -5,6 +5,7 @@ on:
     branches: ["main"]
     paths:
       - "ml-server/**"
+      - ".github/workflows/ml-server.yml"
 
 jobs:
   build-and-push-ml:
@@ -72,7 +73,14 @@ jobs:
             cd /home/ubuntu/interview
             echo "PY_TEST=${{ secrets.PY_TEST }}" >> .env
 
-            docker-compose down --remove-orphans
+            docker-compose stop ml-server
+            docker-compose rm -f ml-server
             docker system prune -af
+
+            echo "📦 ML 이미지 pull"
             docker-compose pull ml-server
+
+            echo "🚀 ML 서버 재시작"
             docker-compose up -d --build ml-server
+
+            echo "✅ ML 서버 배포 완료!"
