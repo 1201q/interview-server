@@ -70,9 +70,6 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             cd /home/ubuntu/interview
-            echo "PY_TEST=${{ secrets.PY_TEST }}" > ml-server/.env
-            echo "ML 서버 이미지 pull"
+            echo "PY_TEST=${{ secrets.PY_TEST }}" >> .env
             docker-compose pull ml-server
-            echo "ML 서버 재시작"
             docker-compose up -d --build ml-server
-            echo "ML 서버 배포 완료!"

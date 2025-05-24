@@ -22,7 +22,7 @@ services:
     expose:
       - "5000"
     env_file:
-      - ml-server/.env
+      - .env
     networks:
       - app-network
     environment:
