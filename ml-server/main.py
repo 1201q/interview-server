@@ -9,7 +9,7 @@ app = Flask(__name__)
 @app.route('/')
 def hello():
   py_test = os.getenv("PY_TEST", "값 없음")
-  return f'PY_TEST 환경변수 값: {py_test}'
+  return f'PY_TEST 환경변수 값111111111: {py_test}'
   
 
 if __name__ == "__main__":
