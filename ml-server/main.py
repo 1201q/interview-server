@@ -21,6 +21,24 @@ def hello():
 def test():
   return f'wow'
 
+@app.route('/stt', methods=["POST"])
+def stt():
+  file = request.files["file"]
+  filename = secure_filename(file.filename)
+
+  with tempfile.TemporaryDirectory() as tmpdir:
+    webm_path = os.path.join(tmpdir, filename)
+    wav_path = os.path.join(tmpdir, "converted.wav")
+
+    file.save(webm_path)
+
+    convert_webm_to_wav(webm_path, wav_path)
+    transcript = transcribe_whisper(wav_path)
+
+    return jsonify({
+      "transcript" : transcript,
+    })
+
 @app.route('/process_audio', methods=["POST"])
 def process_audio():
   file = request.files["file"]
