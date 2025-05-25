@@ -10,7 +10,7 @@ import { SttModule } from "./stt/stt.module";
 import { RedisModule } from "./common/redis/redis.module";
 import { InterviewModule } from "./interview/interview.module";
 import { OciUploadModule } from "./oci-upload/oci-upload.module";
-import { HttpModule, HttpService } from "@nestjs/axios";
+import { HttpModule } from "@nestjs/axios";
 
 @Module({
   imports: [

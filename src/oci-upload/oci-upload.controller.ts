@@ -14,7 +14,13 @@ export class OciUploadController {
   @Post("file")
   @UseInterceptors(FileInterceptor("file"))
   async upload(@UploadedFile() file: Express.Multer.File) {
-    const objectName = await this.ociUploadService.uploadFile(file);
+    const convertedBuffer =
+      await this.ociUploadService.convertToSeekableWebm(file);
+
+    const objectName = await this.ociUploadService.uploadFileFromBuffer(
+      convertedBuffer,
+      `seekable-${file.originalname}`,
+    );
 
     const url = await this.ociUploadService.generatePresignedUrl(objectName);
 

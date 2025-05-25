@@ -7,7 +7,6 @@ import { InterviewSessionQuestion } from "./entities/interview.session.question.
 import { Question } from "src/question/entities/question.entity";
 import { AuthModule } from "src/auth/auth.module";
 import { OciUploadModule } from "src/oci-upload/oci-upload.module";
-import { OciUploadService } from "src/oci-upload/oci-upload.service";
 
 @Module({
   imports: [
@@ -19,7 +18,7 @@ import { OciUploadService } from "src/oci-upload/oci-upload.service";
     AuthModule,
     OciUploadModule,
   ],
-  providers: [InterviewService, OciUploadService],
+  providers: [InterviewService],
   controllers: [InterviewController],
 })
 export class InterviewModule {}
