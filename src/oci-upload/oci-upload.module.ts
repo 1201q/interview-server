@@ -1,10 +1,11 @@
 import { Module } from "@nestjs/common";
 import { OciUploadService } from "./oci-upload.service";
 import { OciUploadController } from "./oci-upload.controller";
-import { HttpModule } from "@nestjs/axios";
+
+import { FlaskModule } from "src/flask/flask.module";
 
 @Module({
-  imports: [HttpModule],
+  imports: [FlaskModule],
   providers: [OciUploadService],
   controllers: [OciUploadController],
   exports: [OciUploadService],

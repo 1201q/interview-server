@@ -174,6 +174,7 @@ export class InterviewService {
     currentQuestion.status = "submitted";
     currentQuestion.ended_at = new Date();
     currentQuestion.audio_path = audioPath;
+    currentQuestion.analysis_status = "processing";
 
     await this.sessionQuestionRepository.save(currentQuestion);
 
@@ -190,12 +191,29 @@ export class InterviewService {
         { status: "completed" },
       );
 
-      return { isLastQuestion: true };
+      return { isLastQuestion: true, questionId: currentQuestion.id };
     } else {
       nextQuestion.status = "ready";
       await this.sessionQuestionRepository.save(nextQuestion);
 
-      return { isLastQuestion: false };
+      return {
+        isLastQuestion: false,
+        questionId: currentQuestion.id,
+        nextQuestionId: nextQuestion.id,
+      };
     }
+  }
+
+  async completeAnalysis(questionId: string, result: any) {
+    await this.sessionQuestionRepository.update(questionId, {
+      analysis_result: JSON.stringify(result),
+      analysis_status: "completed",
+    });
+  }
+
+  async markAnalysisFailed(questionId: string) {
+    await this.sessionQuestionRepository.update(questionId, {
+      analysis_status: "failed",
+    });
   }
 }

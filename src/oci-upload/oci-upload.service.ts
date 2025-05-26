@@ -1,10 +1,9 @@
-import { HttpService } from "@nestjs/axios";
 import { Injectable, OnModuleInit } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import * as FormData from "form-data";
+
 import * as common from "oci-common";
 import * as objectStorage from "oci-objectstorage";
-import { lastValueFrom } from "rxjs";
+
 import { Readable } from "stream";
 import { v4 as uuid } from "uuid";
 
@@ -15,10 +14,7 @@ export class OciUploadService implements OnModuleInit {
   private bucketName: string;
   private uploadManager: objectStorage.UploadManager;
 
-  constructor(
-    private readonly configService: ConfigService,
-    private readonly httpService: HttpService,
-  ) {}
+  constructor(private readonly configService: ConfigService) {}
 
   async onModuleInit() {
     const region = common.Region.AP_CHUNCHEON_1;
@@ -104,24 +100,5 @@ export class OciUploadService implements OnModuleInit {
     });
 
     return `https://objectstorage.${this.configService.get("OCI_REGION")}.oraclecloud.com${result.preauthenticatedRequest.accessUri}`;
-  }
-
-  async convertToSeekableWebm(file: Express.Multer.File) {
-    const baseUrl = this.configService.get<string>("ML_SERVER_URL");
-
-    const form = new FormData();
-    form.append("file", Readable.from(file.buffer), {
-      filename: file.originalname,
-      contentType: file.mimetype,
-    });
-
-    const response = await lastValueFrom(
-      this.httpService.post(`${baseUrl}/convert_seekable`, form, {
-        responseType: "arraybuffer",
-        headers: form.getHeaders(),
-      }),
-    );
-
-    return Buffer.from(response.data);
   }
 }

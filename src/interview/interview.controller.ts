@@ -23,6 +23,7 @@ import {
 } from "./dtos/session.dto";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { OciUploadService } from "src/oci-upload/oci-upload.service";
+import { FlaskService } from "src/flask/flask.service";
 
 @Controller("interview")
 export class InterviewController {
@@ -31,6 +32,7 @@ export class InterviewController {
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
     private readonly ociUploadService: OciUploadService,
+    private readonly flaskService: FlaskService,
   ) {}
 
   @Post("create_session")
@@ -171,7 +173,7 @@ export class InterviewController {
     }
 
     const convertedBuffer =
-      await this.ociUploadService.convertToSeekableWebm(audio);
+      await this.flaskService.convertToSeekableWebm(audio);
 
     const objectName = await this.ociUploadService.uploadFileFromBuffer(
       convertedBuffer,
@@ -184,6 +186,8 @@ export class InterviewController {
       order,
       objectName,
     );
+
+    await this.flaskService.sendToAnalysisServer(audio, success.questionId);
 
     if (success.isLastQuestion) {
       return {
