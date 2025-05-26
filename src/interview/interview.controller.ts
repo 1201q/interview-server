@@ -170,13 +170,19 @@ export class InterviewController {
       );
     }
 
-    const audioPath = await this.ociUploadService.uploadFile(audio);
+    const convertedBuffer =
+      await this.ociUploadService.convertToSeekableWebm(audio);
+
+    const objectName = await this.ociUploadService.uploadFileFromBuffer(
+      convertedBuffer,
+      `seekable-${audio.originalname}`,
+    );
 
     const success = await this.interviewService.submitAnswer(
       userId,
       session_id,
       order,
-      audioPath,
+      objectName,
     );
 
     if (success.isLastQuestion) {

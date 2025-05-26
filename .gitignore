@@ -60,3 +60,5 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 ml-server/__pycache__/
 ml-server/.env
 ml-server/venv/
+
+ml-server/test
