@@ -2,15 +2,39 @@ from flask import Flask, request, jsonify, send_file
 from dotenv import load_dotenv
 import os, tempfile
 from werkzeug.utils import secure_filename
+from urllib.parse import urljoin
 
 from convert import *
 from transcribe import transcribe_whisper
 from analysis import analyze_audio
 from io import BytesIO
+import threading
+
+import tempfile, os, requests
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
 app = Flask(__name__)
+NEST_URL = os.getenv("NEST_URL", "http://localhost:8000")
+webhook_url = urljoin(NEST_URL, "/analysis/webhook")
+
+
+
+def process_in_background(file_bytes: bytes, filename: str):
+    with tempfile.TemporaryDirectory() as tmpdir:
+        webm_path = os.path.join(tmpdir, filename)
+        wav_path = os.path.join(tmpdir, "converted.wav")
+
+        with open(webm_path, "wb") as f:
+            f.write(file_bytes)
+
+        convert_webm_to_wav(webm_path, wav_path)
+        transcript = transcribe_whisper(wav_path)
+
+        try:
+            requests.post(webhook_url, json={ "transcript": transcript })
+        except Exception as e:
+            print("Webhook 전송 실패:", e)
 
 @app.route('/')
 def hello():
@@ -58,6 +82,17 @@ def process_audio():
       "transcript" : transcript,
       "analysis" : analysis
     })
+  
+@app.route('/analyze_answer', methods=["POST"])
+def analyze_answer():
+    file = request.files["file"]
+    filename = secure_filename(file.filename)
+    file_bytes = file.read()
+
+    # 전체 작업을 백그라운드로 넘김
+    threading.Thread(target=process_in_background, args=(file_bytes, filename)).start()
+
+    return jsonify({"status": "processing"}), 202
 
 @app.route('/convert_seekable', methods=['POST'])
 def convert_seekable():

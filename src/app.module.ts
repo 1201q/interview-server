@@ -11,6 +11,7 @@ import { RedisModule } from "./common/redis/redis.module";
 import { InterviewModule } from "./interview/interview.module";
 import { OciUploadModule } from "./oci-upload/oci-upload.module";
 import { HttpModule } from "@nestjs/axios";
+import { AnalysisModule } from "./analysis/analysis.module";
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { HttpModule } from "@nestjs/axios";
     RedisModule,
     InterviewModule,
     OciUploadModule,
+    AnalysisModule,
   ],
   controllers: [AppController],
   providers: [AppService],

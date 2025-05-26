@@ -27,6 +27,7 @@ services:
     networks:
       - app-network
     environment:
+      - NEST_URL=http://interview:8000
       - TZ=Asia/Seoul
     platform: linux/arm64
 
