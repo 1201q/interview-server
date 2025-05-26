@@ -38,4 +38,10 @@ export class InterviewSessionQuestion {
 
   @Column({ type: "varchar", nullable: true })
   audio_path: string;
+
+  @Column({ default: "pending" })
+  analysis_status: "pending" | "processing" | "completed" | "failed";
+
+  @Column({ type: "clob", nullable: true })
+  analysis_result: string;
 }
