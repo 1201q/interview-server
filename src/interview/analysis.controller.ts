@@ -28,13 +28,7 @@ import { WebhookAnalysisDto } from "./dtos/analysis.dto";
 
 @Controller("interview/analysis")
 export class AnalysisController {
-  constructor(
-    private readonly interviewService: InterviewService,
-    private readonly authService: AuthService,
-    private readonly configService: ConfigService,
-    private readonly ociUploadService: OciUploadService,
-    private readonly flaskService: FlaskService,
-  ) {}
+  constructor(private readonly interviewService: InterviewService) {}
 
   @Post("webhook")
   async handleWebhook(@Body() body: WebhookAnalysisDto) {
