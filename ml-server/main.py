@@ -32,8 +32,10 @@ def process_in_background(file_bytes: bytes, filename: str, question_id: str):
         transcript = transcribe_whisper(wav_path)
 
         try:
+            print(transcript)
             requests.post(webhook_url, json={ "result": transcript, "question_id": question_id })
         except Exception as e:
+            print(e)
             requests.post(webhook_url, json={ "error": str(e), "question_id" : question_id})
 
 @app.route('/')

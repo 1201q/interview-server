@@ -9,6 +9,10 @@ import { AuthModule } from "src/auth/auth.module";
 import { OciUploadModule } from "src/oci-upload/oci-upload.module";
 import { FlaskModule } from "src/flask/flask.module";
 import { AnalysisController } from "./analysis.controller";
+import { AudioController } from "./audio.controller";
+import { HttpModule } from "@nestjs/axios";
+import { SessionController } from "./session.controller";
+import { SessionService } from "./session.service";
 
 @Module({
   imports: [
@@ -20,8 +24,14 @@ import { AnalysisController } from "./analysis.controller";
     AuthModule,
     OciUploadModule,
     FlaskModule,
+    HttpModule,
   ],
-  providers: [InterviewService],
-  controllers: [InterviewController, AnalysisController],
+  providers: [InterviewService, SessionService],
+  controllers: [
+    InterviewController,
+    AnalysisController,
+    AudioController,
+    SessionController,
+  ],
 })
 export class InterviewModule {}

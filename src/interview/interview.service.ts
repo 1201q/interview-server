@@ -124,9 +124,12 @@ export class InterviewService {
     await this.sessionRepository.save(session);
 
     const firstQuestion = session.questions[0];
+
     firstQuestion.status = "ready";
 
     await this.sessionQuestionRepository.save(firstQuestion);
+
+    console.log(firstQuestion.question.question_text);
   }
 
   async completeInterviewSession(userId: string, sessionId: string) {
@@ -215,5 +218,22 @@ export class InterviewService {
     await this.sessionQuestionRepository.update(questionId, {
       analysis_status: "failed",
     });
+  }
+
+  async getAnalysisResult(questionId: string) {
+    return this.sessionQuestionRepository.findOne({
+      where: {
+        id: questionId,
+      },
+    });
+  }
+
+  async getAudioPath(questionId: string) {
+    const question = await this.sessionQuestionRepository.findOne({
+      where: { id: questionId },
+      select: ["id", "audio_path"],
+    });
+
+    return question?.audio_path;
   }
 }

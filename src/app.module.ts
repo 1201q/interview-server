@@ -23,7 +23,7 @@ import { FlaskModule } from "./flask/flask.module";
       connectString: process.env.DB_CONNECTION,
       autoLoadEntities: true,
       synchronize: false,
-      logging: true,
+      logging: false,
     }),
     HttpModule,
     AuthModule,

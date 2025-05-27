@@ -24,6 +24,7 @@ import {
 import { FileInterceptor } from "@nestjs/platform-express";
 import { OciUploadService } from "src/oci-upload/oci-upload.service";
 import { FlaskService } from "src/flask/flask.service";
+import { WebhookAnalysisDto } from "./dtos/analysis.dto";
 
 @Controller("interview/analysis")
 export class AnalysisController {
@@ -36,8 +37,10 @@ export class AnalysisController {
   ) {}
 
   @Post("webhook")
-  async handleWebhook(@Body() body: any) {
+  async handleWebhook(@Body() body: WebhookAnalysisDto) {
     const { question_id, result, error } = body;
+
+    console.log(result);
 
     if (error) {
       await this.interviewService.markAnalysisFailed(question_id);
@@ -47,5 +50,14 @@ export class AnalysisController {
 
     await this.interviewService.completeAnalysis(question_id, result);
     return { status: "ok" };
+  }
+
+  @Get(":question_id")
+  async getQ(@Param("question_id") question_id: string) {
+    const result = await this.interviewService.getAnalysisResult(question_id);
+
+    console.log(JSON.parse(result.analysis_result));
+
+    return result;
   }
 }
