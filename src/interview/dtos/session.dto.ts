@@ -15,6 +15,14 @@ export class InterviewSessionWithOrderDto {
   order: number;
 }
 
+export class InterviewSessionWithQuestionIdDto {
+  @IsUUID()
+  session_id: string;
+
+  @IsUUID()
+  question_id: string;
+}
+
 export class CreateInterviewSessionDto {
   @IsUUID()
   id: string;

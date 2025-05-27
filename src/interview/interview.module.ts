@@ -13,6 +13,8 @@ import { AudioController } from "./audio.controller";
 import { HttpModule } from "@nestjs/axios";
 import { SessionController } from "./session.controller";
 import { SessionService } from "./session.service";
+import { AnswerController } from "./answer.controller";
+import { AnswerService } from "./answer.service";
 
 @Module({
   imports: [
@@ -26,12 +28,13 @@ import { SessionService } from "./session.service";
     FlaskModule,
     HttpModule,
   ],
-  providers: [InterviewService, SessionService],
+  providers: [InterviewService, SessionService, AnswerService],
   controllers: [
     InterviewController,
     AnalysisController,
     AudioController,
     SessionController,
+    AnswerController,
   ],
 })
 export class InterviewModule {}

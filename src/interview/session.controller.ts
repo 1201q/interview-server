@@ -1,32 +1,17 @@
-import {
-  Body,
-  Controller,
-  NotFoundException,
-  Patch,
-  Post,
-  Req,
-  Res,
-} from "@nestjs/common";
-
-import { OciUploadService } from "src/oci-upload/oci-upload.service";
-import { HttpService } from "@nestjs/axios";
-import { InterviewService } from "./interview.service";
-import { Request, Response } from "express";
+import { Body, Controller, Patch, Post, Req } from "@nestjs/common";
+import { Request } from "express";
 import {
   CreateInterviewSessionArrayDto,
   InterviewSessionDto,
 } from "./dtos/session.dto";
 import { AuthService } from "src/auth/auth.service";
 import { SessionService } from "./session.service";
-import { text } from "stream/consumers";
 
 @Controller("session")
 export class SessionController {
   constructor(
-    private readonly ociUploadService: OciUploadService,
-    private readonly httpService: HttpService,
     private readonly sessionService: SessionService,
-    private readonly interviewService: InterviewService,
+
     private readonly authService: AuthService,
   ) {}
 
