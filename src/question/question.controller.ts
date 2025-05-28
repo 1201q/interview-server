@@ -153,4 +153,13 @@ export class QuestionController {
 
     return { questions: questions };
   }
+
+  @Post("/feedback/test")
+  async feedbackTest(@Body() body: { question_text: string }) {
+    const standard = await this.openaiService.generateFeedback(
+      body.question_text,
+    );
+
+    return { standard: standard };
+  }
 }

@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import OpenAI from "openai";
-import { GenerateQuestionType } from "src/common/interfaces/common.interface";
+
 import { GenerateQuestionFromGptDto } from "./dtos/generate-question.dto";
 
 @Injectable()
@@ -93,5 +93,65 @@ export class OpenaiService {
       }
 
       이제 ${topic}에 대해 ${question_type} 유형의 질문 10개를 생성해줘.`;
+  }
+
+  async generateFeedback(questionText: string) {
+    const prompt = this.getFeedbackPrompt(questionText);
+
+    const reponse = await this.openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content:
+            "당신은 개발자 면접관이며, 주어진 기술 면접 질문에 대해 지원자의 답변을 평가할 때 사용할 기준 항목을 정의하는 역할입니다.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.7,
+    });
+
+    const content = reponse.choices[0]?.message?.content;
+
+    console.log(content);
+
+    try {
+      const parsed = JSON.parse(content ?? "");
+
+      console.log(parsed);
+      return parsed;
+    } catch (error) {
+      throw new Error();
+    }
+  }
+
+  private getFeedbackPrompt(question_text: string) {
+    return `너는 지금 개발자 면접관이야. 아래 질문을 평가하기 위한 '의도'를 한 문장으로 정의하고, 평가 기준을 '핵심 기준'과 '보조 기준'으로 나눠서 JSON으로 출력해줘.
+
+      - 질문: ${question_text}  
+
+      조건:
+      1. 핵심 기준은 이 질문에서 가장 중요하게 평가해야 할 2~3개의 항목이야.
+      2. 보조 기준은 답변의 완성도나 추가적인 강점을 평가할 수 있는 1~2개의 항목이야.
+      3. 질문의 의도에 따라 평가 기준을 잘 선정해야 해. 질문이 개념 설명과 지식을 요구했는지, 아니면 자신의 경험을 요구했는지에 대해 묻는 질문인지를 잘 구분해서 만들어야 해.
+      4. 각 항목은 key는 항목명, value는 설명으로 구성돼야 해.
+      5. 결과는 아래 JSON 형식만 따라야 하고, 다른 설명은 절대 포함하지 마.
+
+      형식 예시:
+      {
+        "의도": "지원자가 JWT 인증의 만료와 갱신 전략을 이해하고 있는지를 평가하기 위한 질문입니다.",
+        "핵심_기준": {
+          "만료 개념 이해도": "JWT 토큰의 만료 시점 설정과 그 이유를 설명할 수 있는가",
+          "갱신 전략 이해도": "리프레시 토큰 등 실제 만료 시 갱신 방식의 장단점을 설명했는가"
+        },
+        "보조_기준": {
+          "실무 경험": "직접 JWT 인증 시스템을 구현한 경험을 간단히 언급했는가",
+          "보안 인식": "만료 처리 시 발생할 수 있는 보안 위협을 알고 있는가"
+        }
+      }
+      `;
   }
 }
