@@ -3,7 +3,7 @@ from pydub import AudioSegment, silence
 import numpy as np
 
 
-# 0.01 이상이면 무음이라고 판단.
+# 0.01 이상이면 무음이라고 판단. //
 def is_audio_silent(wav_path, threshold=0.01):
     y, sr = librosa.load(wav_path, sr=None)
     rms = np.sqrt(np.mean(y**2))
