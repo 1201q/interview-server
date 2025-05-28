@@ -1,6 +1,7 @@
 import librosa
 from pydub import AudioSegment, silence
 import numpy as np
+import parselmouth
 
 
 # 0.01 이상이면 무음이라고 판단. //
