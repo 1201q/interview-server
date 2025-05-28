@@ -1,12 +1,13 @@
-
 FROM mambaorg/micromamba:1.4.3 AS builder
 
-
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+
 RUN micromamba create -n ml-env \
-    -c conda-forge \
+    -c conda-forge \        
+    -c ets \                
     python=3.10 \
-    praat-parselmouth \
+    ets::praat-parselmouth \
     flask \
     gunicorn \
     python-dotenv \
@@ -19,12 +20,10 @@ RUN micromamba create -n ml-env \
 
 RUN echo "source /opt/conda/etc/profile.d/conda.sh && conda activate ml-env" >> ~/.bashrc
 
-
 WORKDIR /app
 COPY . .
 
 
-# 2) Runtime: 슬림 파이썬 이미지에 복사
 FROM python:3.10-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -34,6 +33,7 @@ WORKDIR /app
 
 
 COPY --from=builder /opt/conda/envs/ml-env /opt/conda/envs/ml-env
+
 
 ENV PATH=/opt/conda/envs/ml-env/bin:$PATH
 
