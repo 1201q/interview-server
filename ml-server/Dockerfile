@@ -6,15 +6,6 @@ ENV PYTHONUNBUFFERED 1
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    libsndfile1 \
-    libasound2 \
-    libglib2.0-0 \
-    libffi-dev \
-    git \
-    && rm -rf /var/lib/apt/lists/*
-
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     build-essential \
@@ -27,7 +18,7 @@ RUN apt-get update && \
 
 COPY requirements.txt ./
 RUN pip install --upgrade pip
-RUN pip install --no-cache-dir praat-parselmouth
+RUN pip install --no-cache-dir --no-build-isolation praat-parselmouth
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
