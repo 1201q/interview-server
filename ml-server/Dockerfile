@@ -1,38 +1,30 @@
-FROM python:3.10-slim AS builder
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+FROM mambaorg/micromamba:1.4.3 AS builder
+
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN micromamba create -n ml-env \
+    -c conda-forge \
+    python=3.10 \
+    praat-parselmouth \
+    flask \
+    gunicorn \
+    python-dotenv \
+    requests \
+    numpy \
+    librosa \
+    -y && \
+    micromamba clean --all --yes
+
+
+RUN echo "source /opt/conda/etc/profile.d/conda.sh && conda activate ml-env" >> ~/.bashrc
+
 
 WORKDIR /app
-
-
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    build-essential \
-    cmake \
-    ninja-build \
-    python3-dev \
-    libsndfile1-dev \
-    libglib2.0-dev \
-    pkg-config && \
-    rm -rf /var/lib/apt/lists/*
-
-
-COPY requirements.txt ./
-RUN pip install --upgrade pip
-RUN pip install --no-cache-dir scikit-build pybind11
-
-
-RUN pip install --no-cache-dir --no-build-isolation praat-parselmouth
-
-
-RUN pip install --no-cache-dir -r requirements.txt
-
-
 COPY . .
 
 
-# 런타임 스테이지
+# 2) Runtime: 슬림 파이썬 이미지에 복사
 FROM python:3.10-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -41,8 +33,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 
-COPY --from=builder /usr/local/lib/python3.10/site-packages \
-    /usr/local/lib/python3.10/site-packages
+COPY --from=builder /opt/conda/envs/ml-env /opt/conda/envs/ml-env
+
+ENV PATH=/opt/conda/envs/ml-env/bin:$PATH
 
 
 COPY --from=builder /app /app
