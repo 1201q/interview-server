@@ -26,7 +26,7 @@ import { OciUploadService } from "src/oci-upload/oci-upload.service";
 import { FlaskService } from "src/flask/flask.service";
 import { WebhookAnalysisDto } from "./dtos/analysis.dto";
 
-@Controller("interview/analysis")
+@Controller("analysis")
 export class AnalysisController {
   constructor(private readonly interviewService: InterviewService) {}
 
@@ -34,15 +34,15 @@ export class AnalysisController {
   async handleWebhook(@Body() body: WebhookAnalysisDto) {
     const { question_id, result, error } = body;
 
-    console.log(result);
-
     if (error) {
       await this.interviewService.markAnalysisFailed(question_id);
+      console.log(`${question_id} 실패`);
 
-      return { status: "fail" };
+      return { status: "fail", message: error };
     }
 
     await this.interviewService.completeAnalysis(question_id, result);
+    console.log(`${question_id} 성공`);
     return { status: "ok" };
   }
 

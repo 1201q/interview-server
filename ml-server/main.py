@@ -16,7 +16,7 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
 app = Flask(__name__)
 NEST_URL = os.getenv("NEST_URL", "http://localhost:8000")
-webhook_url = urljoin(NEST_URL, "/interview/analysis/webhook")
+webhook_url = urljoin(NEST_URL, "/analysis/webhook")
 
 
 @app.route("/")
@@ -82,9 +82,10 @@ def process_in_background(file_bytes: bytes, filename: str, question_id: str):
 
         try:
             print(transcript)
-            requests.post(
+            resp = requests.post(
                 webhook_url, json={"result": transcript, "question_id": question_id}
             )
+            print(f"[Webhook Sent] Status: {resp.status_code}, Body: {resp.text}")
         except Exception as e:
             print(e)
             requests.post(

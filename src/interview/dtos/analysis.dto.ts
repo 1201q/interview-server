@@ -1,13 +1,22 @@
 import { Type } from "class-transformer";
-import { IsNumber, IsString, IsUUID, ValidateNested } from "class-validator";
+import {
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  IsUUID,
+  ValidateNested,
+} from "class-validator";
 
 export class WebhookAnalysisDto {
   @IsUUID()
   question_id: string;
 
-  @IsString()
-  result?: string;
+  @IsOptional()
+  @IsObject()
+  result?: any;
 
+  @IsOptional()
   @IsString()
   error?: string;
 }

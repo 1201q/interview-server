@@ -162,4 +162,22 @@ export class QuestionController {
 
     return { standard: standard };
   }
+
+  @Post("/feedback/array")
+  async feedbackArray(
+    @Body()
+    body: {
+      questions: { question_text: string; question_id: string }[];
+    },
+  ) {
+    const standard = await this.openaiService.generateFeedbackStandard(
+      body.questions,
+    );
+
+    console.log(standard);
+
+    // return { standard: standard };
+
+    return { standard: standard };
+  }
 }

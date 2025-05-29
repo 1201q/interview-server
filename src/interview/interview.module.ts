@@ -15,6 +15,7 @@ import { SessionController } from "./session.controller";
 import { SessionService } from "./session.service";
 import { AnswerController } from "./answer.controller";
 import { AnswerService } from "./answer.service";
+import { AnalysisService } from "./analysis.service";
 
 @Module({
   imports: [
@@ -28,7 +29,7 @@ import { AnswerService } from "./answer.service";
     FlaskModule,
     HttpModule,
   ],
-  providers: [InterviewService, SessionService, AnswerService],
+  providers: [InterviewService, SessionService, AnswerService, AnalysisService],
   controllers: [
     InterviewController,
     AnalysisController,
