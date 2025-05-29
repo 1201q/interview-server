@@ -9,6 +9,7 @@ from transcribe import transcribe_whisper
 from analysis import analyze_audio
 from io import BytesIO
 import threading
+import json
 
 import tempfile, os, requests
 
@@ -97,8 +98,11 @@ def process_in_background(file_bytes: bytes, filename: str, question_id: str):
 def analyze_answer():
     file = request.files["file"]
     question_id = request.form["question_id"]
+    evaluation_standard = json.loads(request.form["evaluation_standard"])
     filename = secure_filename(file.filename)
     file_bytes = file.read()
+
+    print(evaluation_standard)
 
     # 전체 작업을 백그라운드로 넘김
     threading.Thread(

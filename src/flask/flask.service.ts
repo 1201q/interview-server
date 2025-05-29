@@ -3,6 +3,7 @@ import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import * as FormData from "form-data";
 import { lastValueFrom } from "rxjs";
+import { EvaluationStandard } from "src/common/interfaces/analysis.interface";
 import { Readable } from "stream";
 
 @Injectable()
@@ -31,7 +32,11 @@ export class FlaskService {
     return Buffer.from(response.data);
   }
 
-  async sendToAnalysisServer(webm: Express.Multer.File, questionId: string) {
+  async sendToAnalysisServer(
+    webm: Express.Multer.File,
+    questionId: string,
+    standard: EvaluationStandard,
+  ) {
     const baseUrl = this.configService.get<string>("ML_SERVER_URL");
 
     const form = new FormData();
@@ -41,6 +46,7 @@ export class FlaskService {
     });
 
     form.append("question_id", questionId);
+    form.append("evaluation_standard", JSON.stringify(standard));
 
     await lastValueFrom(
       this.httpService.post(`${baseUrl}/analyze_answer`, form, {

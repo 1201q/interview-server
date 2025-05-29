@@ -16,6 +16,7 @@ import { AuthService } from "src/auth/auth.service";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { FlaskService } from "src/flask/flask.service";
 import { AnswerService } from "./answer.service";
+import { AnalysisService } from "./analysis.service";
 
 @Controller("answer")
 export class AnswerController {
@@ -24,6 +25,7 @@ export class AnswerController {
     private readonly authService: AuthService,
     private readonly flaskService: FlaskService,
     private readonly answerService: AnswerService,
+    private readonly analysisService: AnalysisService,
   ) {}
 
   @Patch("submit")
@@ -52,7 +54,14 @@ export class AnswerController {
       objectName,
     );
 
-    await this.flaskService.sendToAnalysisServer(audio, result.questionId);
+    const evaluationStandard =
+      await this.analysisService.getEvaluationStandard(session_id);
+
+    await this.flaskService.sendToAnalysisServer(
+      audio,
+      result.questionId,
+      evaluationStandard,
+    );
 
     if (result.isLastQuestion) {
       return { message: `마지막 질문입니다.`, is_last: true };

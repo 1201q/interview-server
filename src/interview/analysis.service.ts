@@ -4,10 +4,10 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { InterviewSession } from "./entities/interview.session.entity";
 import { Repository } from "typeorm";
 import { InterviewSessionQuestion } from "./entities/interview.session.question.entity";
-import { Question } from "src/question/entities/question.entity";
 
 import { ConfigService } from "@nestjs/config";
 import OpenAI from "openai";
+import { EvaluationStandard } from "src/common/interfaces/analysis.interface";
 
 @Injectable()
 export class AnalysisService {
@@ -50,7 +50,7 @@ export class AnalysisService {
     const content = reponse.choices[0]?.message?.content;
 
     try {
-      const parsed = JSON.parse(content ?? "");
+      const parsed: EvaluationStandard = JSON.parse(content ?? "");
 
       console.log(parsed);
       return parsed;
@@ -149,7 +149,10 @@ export class AnalysisService {
     });
   }
 
-  async updateEvaluationStandard(sessionId: string, result: any) {
+  async updateEvaluationStandard(
+    sessionId: string,
+    result: EvaluationStandard,
+  ) {
     await this.sessionRepository.update(sessionId, {
       evaluation_standard: JSON.stringify(result),
     });
@@ -167,5 +170,18 @@ export class AnalysisService {
         id: questionId,
       },
     });
+  }
+
+  async getEvaluationStandard(sessionId: string) {
+    const result = await this.sessionRepository.findOne({
+      where: {
+        id: sessionId,
+      },
+      select: ["evaluation_standard"],
+    });
+
+    const parsed: EvaluationStandard = JSON.parse(result.evaluation_standard);
+
+    return parsed;
   }
 }
