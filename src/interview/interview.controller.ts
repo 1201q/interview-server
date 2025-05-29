@@ -1,38 +1,27 @@
 import {
-  Body,
   Controller,
   Get,
   NotFoundException,
   Param,
-  Patch,
-  Post,
   Req,
-  Res,
-  UploadedFile,
-  UseInterceptors,
+  Sse,
 } from "@nestjs/common";
 import { InterviewService } from "./interview.service";
 import { AuthService } from "src/auth/auth.service";
 
-import { Request, Response } from "express";
-import { ConfigService } from "@nestjs/config";
-import {
-  CreateInterviewSessionArrayDto,
-  InterviewSessionDto,
-  InterviewSessionWithOrderDto,
-} from "./dtos/session.dto";
-import { FileInterceptor } from "@nestjs/platform-express";
-import { OciUploadService } from "src/oci-upload/oci-upload.service";
-import { FlaskService } from "src/flask/flask.service";
+import { Request } from "express";
+import { SseService } from "./sse.service";
+import { map, Observable } from "rxjs";
 
-@Controller("interview")
+@Controller("interview/session")
 export class InterviewController {
   constructor(
     private readonly interviewService: InterviewService,
     private readonly authService: AuthService,
+    private readonly sseService: SseService,
   ) {}
 
-  @Get("session/:session_id")
+  @Get(":session_id")
   async getActiveSession(
     @Req() req: Request,
     @Param("session_id") session_id: string,
@@ -52,5 +41,17 @@ export class InterviewController {
     }
 
     return session;
+  }
+
+  @Sse("stream/:session_id")
+  stream(
+    @Param("session_id") sessionId: string,
+  ): Observable<{ data: any; type: string }> {
+    return this.sseService.getInterviewSeesionStatusStream(sessionId).pipe(
+      map((data) => ({
+        type: "status",
+        data,
+      })),
+    );
   }
 }

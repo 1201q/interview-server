@@ -6,12 +6,15 @@ import {
 } from "./dtos/session.dto";
 import { AuthService } from "src/auth/auth.service";
 import { SessionService } from "./session.service";
+import { InterviewService } from "./interview.service";
+import { AnalysisService } from "./analysis.service";
 
 @Controller("session")
 export class SessionController {
   constructor(
     private readonly sessionService: SessionService,
-
+    private readonly analysisService: AnalysisService,
+    private readonly interviewService: InterviewService,
     private readonly authService: AuthService,
   ) {}
 
@@ -28,6 +31,24 @@ export class SessionController {
     const sessionId = await this.sessionService.createInterviewSession(
       userId,
       questions,
+    );
+
+    const createdQuestions =
+      await this.interviewService.getQuestionsBySessionId(sessionId);
+
+    const submitData = createdQuestions.map((q) => {
+      return {
+        question_text: q.question.question_text,
+        question_id: q.question.id,
+      };
+    });
+
+    const evaluationStandard =
+      await this.analysisService.generateEvaluations(submitData);
+
+    await this.analysisService.updateEvaluationStandard(
+      sessionId,
+      evaluationStandard,
     );
 
     return { session_id: sessionId };

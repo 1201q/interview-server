@@ -13,7 +13,14 @@ import OpenAI from "openai";
 export class AnalysisService {
   private openai: OpenAI;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    @InjectRepository(InterviewSession)
+    private sessionRepository: Repository<InterviewSession>,
+
+    @InjectRepository(InterviewSessionQuestion)
+    private sessionQuestionRepository: Repository<InterviewSessionQuestion>,
+    private readonly configService: ConfigService,
+  ) {
     this.openai = new OpenAI({
       apiKey: this.configService.get("OPENAI_API_KEY"),
     });
@@ -133,5 +140,32 @@ export class AnalysisService {
       질문 목록:
       ${questionList}
       `;
+  }
+
+  async completeAnalysis(questionId: string, result: any) {
+    await this.sessionQuestionRepository.update(questionId, {
+      analysis_result: JSON.stringify(result),
+      analysis_status: "completed",
+    });
+  }
+
+  async updateEvaluationStandard(sessionId: string, result: any) {
+    await this.sessionRepository.update(sessionId, {
+      evaluation_standard: JSON.stringify(result),
+    });
+  }
+
+  async markAnalysisFailed(questionId: string) {
+    await this.sessionQuestionRepository.update(questionId, {
+      analysis_status: "failed",
+    });
+  }
+
+  async getAnalysisResult(questionId: string) {
+    return this.sessionQuestionRepository.findOne({
+      where: {
+        id: questionId,
+      },
+    });
   }
 }

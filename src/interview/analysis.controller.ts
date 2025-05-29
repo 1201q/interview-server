@@ -1,54 +1,31 @@
-import {
-  Body,
-  Controller,
-  Get,
-  NotFoundException,
-  Param,
-  Patch,
-  Post,
-  Req,
-  Res,
-  UploadedFile,
-  UseInterceptors,
-} from "@nestjs/common";
-import { InterviewService } from "./interview.service";
-import { AuthService } from "src/auth/auth.service";
+import { Body, Controller, Get, Param, Post } from "@nestjs/common";
 
-import { Request, Response } from "express";
-import { ConfigService } from "@nestjs/config";
-import {
-  CreateInterviewSessionArrayDto,
-  InterviewSessionDto,
-  InterviewSessionWithOrderDto,
-} from "./dtos/session.dto";
-import { FileInterceptor } from "@nestjs/platform-express";
-import { OciUploadService } from "src/oci-upload/oci-upload.service";
-import { FlaskService } from "src/flask/flask.service";
 import { WebhookAnalysisDto } from "./dtos/analysis.dto";
+import { AnalysisService } from "./analysis.service";
 
 @Controller("analysis")
 export class AnalysisController {
-  constructor(private readonly interviewService: InterviewService) {}
+  constructor(private readonly analysisService: AnalysisService) {}
 
   @Post("webhook")
   async handleWebhook(@Body() body: WebhookAnalysisDto) {
     const { question_id, result, error } = body;
 
     if (error) {
-      await this.interviewService.markAnalysisFailed(question_id);
+      await this.analysisService.markAnalysisFailed(question_id);
       console.log(`${question_id} 실패`);
 
       return { status: "fail", message: error };
     }
 
-    await this.interviewService.completeAnalysis(question_id, result);
+    await this.analysisService.completeAnalysis(question_id, result);
     console.log(`${question_id} 성공`);
     return { status: "ok" };
   }
 
   @Get(":question_id")
   async getQ(@Param("question_id") question_id: string) {
-    const result = await this.interviewService.getAnalysisResult(question_id);
+    const result = await this.analysisService.getAnalysisResult(question_id);
 
     console.log(JSON.parse(result.analysis_result));
 

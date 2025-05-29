@@ -34,27 +34,6 @@ export class InterviewService {
     });
   }
 
-  async completeAnalysis(questionId: string, result: any) {
-    await this.sessionQuestionRepository.update(questionId, {
-      analysis_result: JSON.stringify(result),
-      analysis_status: "completed",
-    });
-  }
-
-  async markAnalysisFailed(questionId: string) {
-    await this.sessionQuestionRepository.update(questionId, {
-      analysis_status: "failed",
-    });
-  }
-
-  async getAnalysisResult(questionId: string) {
-    return this.sessionQuestionRepository.findOne({
-      where: {
-        id: questionId,
-      },
-    });
-  }
-
   async getAudioPath(questionId: string) {
     const question = await this.sessionQuestionRepository.findOne({
       where: { id: questionId },
@@ -62,5 +41,13 @@ export class InterviewService {
     });
 
     return question?.audio_path;
+  }
+
+  async getQuestionsBySessionId(sessionId: string) {
+    return this.sessionQuestionRepository.find({
+      where: {
+        session: { id: sessionId },
+      },
+    });
   }
 }

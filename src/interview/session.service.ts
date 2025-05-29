@@ -26,7 +26,7 @@ export class SessionService {
   async createInterviewSession(
     userId: string,
     questions: { id: string; order: number }[],
-  ): Promise<string> {
+  ) {
     const questionIds = questions.map((q) => q.id);
 
     // 임시
@@ -67,7 +67,7 @@ export class SessionService {
       });
     });
 
-    await this.sessionQuestionRepository.save(sessionQuestions);
+    const data = await this.sessionQuestionRepository.save(sessionQuestions);
 
     const result = await this.sessionRepository.findOne({
       where: { id: savedSession.id },

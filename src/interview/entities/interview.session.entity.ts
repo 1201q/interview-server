@@ -29,4 +29,7 @@ export class InterviewSession {
 
   @UpdateDateColumn()
   updated_at: Date;
+
+  @Column({ type: "clob", nullable: true })
+  evaluation_standard: string;
 }
