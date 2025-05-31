@@ -9,13 +9,15 @@ export class AnalysisController {
 
   @Post("webhook")
   async handleWebhook(@Body() body: WebhookAnalysisDto) {
-    const { question_id, result, error } = body;
+    const { question_id, result, message, status } = body;
 
-    if (error) {
+    console.log(result);
+
+    if (status === "fail") {
       await this.analysisService.markAnalysisFailed(question_id);
       console.log(`${question_id} 실패`);
 
-      return { status: "fail", message: error };
+      return { status: "fail", message: message };
     }
 
     await this.analysisService.completeAnalysis(question_id, result);

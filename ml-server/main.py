@@ -10,6 +10,7 @@ from analysis import analyze_audio
 from io import BytesIO
 import threading
 import json
+from analysis_main import *
 
 import tempfile, os, requests
 
@@ -70,30 +71,6 @@ def process_audio():
         return jsonify({"transcript": transcript, "analysis": analysis})
 
 
-def process_in_background(file_bytes: bytes, filename: str, question_id: str):
-    with tempfile.TemporaryDirectory() as tmpdir:
-        webm_path = os.path.join(tmpdir, filename)
-        wav_path = os.path.join(tmpdir, "converted.wav")
-
-        with open(webm_path, "wb") as f:
-            f.write(file_bytes)
-
-        convert_webm_to_wav(webm_path, wav_path)
-        transcript = transcribe_whisper(wav_path)
-
-        try:
-            print(transcript)
-            resp = requests.post(
-                webhook_url, json={"result": transcript, "question_id": question_id}
-            )
-            print(f"[Webhook Sent] Status: {resp.status_code}, Body: {resp.text}")
-        except Exception as e:
-            print(e)
-            requests.post(
-                webhook_url, json={"error": str(e), "question_id": question_id}
-            )
-
-
 @app.route("/analyze_answer", methods=["POST"])
 def analyze_answer():
     file = request.files["file"]
@@ -110,14 +87,9 @@ def analyze_answer():
             matched_evaluation = evaluation
             break
 
-    print(question_id)
-    print(evaluation_standard)
-    print(matched_evaluation)
-    print(job_role)
-
-    # 전체 작업을 백그라운드로 넘김
     threading.Thread(
-        target=process_in_background, args=(file_bytes, filename, question_id)
+        target=new_process_in_background,
+        args=(file_bytes, filename, question_id, matched_evaluation, job_role),
     ).start()
 
     return jsonify({"status": "processing"}), 202

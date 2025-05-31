@@ -7,6 +7,7 @@ import {
   IsUUID,
   ValidateNested,
 } from "class-validator";
+import { AnalysisResult } from "src/common/interfaces/analysis.interface";
 
 export class WebhookAnalysisDto {
   @IsUUID()
@@ -14,9 +15,19 @@ export class WebhookAnalysisDto {
 
   @IsOptional()
   @IsObject()
-  result?: any;
+  result?: AnalysisResult;
 
-  @IsOptional()
   @IsString()
-  error?: string;
+  message: string;
+
+  @IsString()
+  status: "fail" | "success";
+
+  @IsString()
+  code:
+    | "silent"
+    | "too_short"
+    | "stt_error"
+    | "analysis_success"
+    | "analysis_error";
 }

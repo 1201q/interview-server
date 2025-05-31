@@ -1,3 +1,5 @@
+from ast import Dict
+from typing import Any, Optional
 from flask import Flask, request, jsonify, send_file
 from dotenv import load_dotenv
 import os, tempfile
@@ -6,7 +8,7 @@ from urllib.parse import urljoin
 
 from convert import *
 from analysis_functions import *
-from transcribe import transcribe_whisper
+from transcribe import *
 from analysis import analyze_audio
 from io import BytesIO
 import threading
@@ -21,7 +23,31 @@ NEST_URL = os.getenv("NEST_URL", "http://localhost:8000")
 webhook_url = urljoin(NEST_URL, "/analysis/webhook")
 
 
-def process_in_background(file_bytes: bytes, filename: str, question_id: str):
+def get_diff_array(og_words: list[dict], corrected_words: list[str]):
+    diff_array = []
+
+    for i, original_word in enumerate(og_words):
+        before = original_word["word"]
+        after = corrected_words[i] if i < len(corrected_words) else ""
+        diff_array.append(
+            {
+                "before": before,
+                "after": after,
+                "start": original_word.get("start"),
+                "end": original_word.get("end"),
+            }
+        )
+
+    return diff_array
+
+
+def new_process_in_background(
+    file_bytes: bytes,
+    filename: str,
+    question_id: str,
+    matched_evaluation: Any,
+    job_role: str,
+):
     with tempfile.TemporaryDirectory() as tmpdir:
         webm_path = os.path.join(tmpdir, filename)
         wav_path = os.path.join(tmpdir, "converted.wav")
@@ -80,7 +106,12 @@ def process_in_background(file_bytes: bytes, filename: str, question_id: str):
             return
 
         try:
-            print(transcript)
+            og_words = transcript["words"]
+            corrected_words = get_correct_words_with_gpt(
+                [w["word"] for w in og_words], matched_evaluation["question_text"]
+            )
+
+            diff_array = get_diff_array(og_words, corrected_words)
 
             requests.post(
                 webhook_url,
@@ -89,7 +120,11 @@ def process_in_background(file_bytes: bytes, filename: str, question_id: str):
                     "code": "analysis_success",
                     "status": "success",
                     "question_id": question_id,
-                    "result": transcript,
+                    "result": {
+                        "transcript": transcript,
+                        "words": diff_array,
+                        "matched_evaluation": matched_evaluation,
+                    },
                 },
             )
         except Exception as e:
