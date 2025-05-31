@@ -97,12 +97,23 @@ def process_in_background(file_bytes: bytes, filename: str, question_id: str):
 @app.route("/analyze_answer", methods=["POST"])
 def analyze_answer():
     file = request.files["file"]
-    question_id = request.form["question_id"]
+    question_id = str(request.form["question_id"])
     evaluation_standard = json.loads(request.form["evaluation_standard"])
     filename = secure_filename(file.filename)
     file_bytes = file.read()
 
+    job_role = evaluation_standard.get("job_role")
+    matched_evaluation = None
+
+    for evaluation in evaluation_standard.get("question_evaluations", []):
+        if evaluation.get("question_id").strip() == question_id.strip():
+            matched_evaluation = evaluation
+            break
+
+    print(question_id)
     print(evaluation_standard)
+    print(matched_evaluation)
+    print(job_role)
 
     # 전체 작업을 백그라운드로 넘김
     threading.Thread(

@@ -18,7 +18,7 @@ import tempfile, os, requests
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 NEST_URL = os.getenv("NEST_URL", "http://localhost:8000")
-webhook_url = urljoin(NEST_URL, "/interview/analysis/webhook")
+webhook_url = urljoin(NEST_URL, "/analysis/webhook")
 
 
 def process_in_background(file_bytes: bytes, filename: str, question_id: str):

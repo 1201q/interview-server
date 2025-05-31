@@ -39,7 +39,7 @@ export class SessionController {
     const submitData = createdQuestions.map((q) => {
       return {
         question_text: q.question.question_text,
-        question_id: q.question.id,
+        question_id: q.id,
       };
     });
 
