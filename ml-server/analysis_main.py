@@ -108,7 +108,9 @@ def new_process_in_background(
         try:
             og_words = transcript["words"]
             corrected_words = get_correct_words_with_gpt(
-                [w["word"] for w in og_words], matched_evaluation["question_text"]
+                [w["word"] for w in og_words],
+                matched_evaluation["question_text"],
+                job_role,
             )
 
             diff_array = get_diff_array(og_words, corrected_words)
