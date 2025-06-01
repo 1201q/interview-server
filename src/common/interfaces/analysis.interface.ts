@@ -58,3 +58,10 @@ export interface AnalysisResult {
   matched_evaluation: EvaluationStandard;
   transcript: WhisperSttType;
 }
+
+export interface AnalysisProgress {
+  total: number;
+  done: number;
+  percent: number;
+  status: "pending" | "loading" | "done";
+}

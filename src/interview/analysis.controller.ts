@@ -33,4 +33,12 @@ export class AnalysisController {
 
     return result;
   }
+
+  @Get("progress/:session_id")
+  async getProgress(@Param("session_id") session_id: string) {
+    const result = await this.analysisService.getAnalysisProgress(session_id);
+
+    console.log(result);
+    return result;
+  }
 }

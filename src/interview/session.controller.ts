@@ -40,16 +40,13 @@ export class SessionController {
       return {
         question_text: q.question.question_text,
         question_id: q.id,
+        question_role: q.question.role,
       };
     });
 
-    const evaluationStandard =
-      await this.analysisService.generateEvaluations(submitData);
+    const jobRole = await this.analysisService.generateJobRole(submitData);
 
-    await this.analysisService.updateEvaluationStandard(
-      sessionId,
-      evaluationStandard,
-    );
+    await this.analysisService.updateJobRole(sessionId, jobRole);
 
     return { session_id: sessionId };
   }

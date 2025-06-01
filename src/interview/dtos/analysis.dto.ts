@@ -1,12 +1,5 @@
 import { Type } from "class-transformer";
-import {
-  IsNumber,
-  IsObject,
-  IsOptional,
-  IsString,
-  IsUUID,
-  ValidateNested,
-} from "class-validator";
+import { IsObject, IsOptional, IsString, IsUUID } from "class-validator";
 import { AnalysisResult } from "src/common/interfaces/analysis.interface";
 
 export class WebhookAnalysisDto {

@@ -75,21 +75,13 @@ def process_audio():
 def analyze_answer():
     file = request.files["file"]
     question_id = str(request.form["question_id"])
-    evaluation_standard = json.loads(request.form["evaluation_standard"])
+    job_role = str(request.form["job_role"])
     filename = secure_filename(file.filename)
     file_bytes = file.read()
 
-    job_role = evaluation_standard.get("job_role")
-    matched_evaluation = None
-
-    for evaluation in evaluation_standard.get("question_evaluations", []):
-        if evaluation.get("question_id").strip() == question_id.strip():
-            matched_evaluation = evaluation
-            break
-
     threading.Thread(
         target=new_process_in_background,
-        args=(file_bytes, filename, question_id, matched_evaluation, job_role),
+        args=(file_bytes, filename, question_id, job_role),
     ).start()
 
     return jsonify({"status": "processing"}), 202

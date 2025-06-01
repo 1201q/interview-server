@@ -7,7 +7,8 @@ import { InterviewSessionQuestion } from "./entities/interview.session.question.
 
 import { ConfigService } from "@nestjs/config";
 import OpenAI from "openai";
-import { EvaluationStandard } from "src/common/interfaces/analysis.interface";
+import { QuestionType } from "src/common/interfaces/common.interface";
+import { AnalysisProgress } from "src/common/interfaces/analysis.interface";
 
 @Injectable()
 export class AnalysisService {
@@ -26,18 +27,22 @@ export class AnalysisService {
     });
   }
 
-  async generateEvaluations(
-    questions: { question_text: string; question_id: string }[],
+  async generateJobRole(
+    questions: {
+      question_text: string;
+      question_id: string;
+      question_role: QuestionType;
+    }[],
   ) {
-    const prompt = this.getEvaluationsPrompt(questions);
+    const prompt = this.getJobRolePrompt(questions);
 
     const reponse = await this.openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
           content:
-            "당신은 시니어 개발자 면접관이자 평가 기준 설계 전문가입니다. 주어진 기술 면접 질문 목록을 분석하여, 각 질문의 평가 목적과 평가 항목(핵심 기준 및 보조 기준)을 정의하는 것이 당신의 임무입니다. 질문들을 통해 지원자의 직무를 먼저 추론한 후, 해당 직무 기준에 맞는 평가 항목을 생성해야 합니다.",
+            "당신은 시니어 개발자 면접관입니다. 기술 면접 질문을 기반으로 지원자의 직무를 유추하는 것이 당신의 임무입니다.",
         },
         {
           role: "user",
@@ -50,92 +55,59 @@ export class AnalysisService {
     const content = reponse.choices[0]?.message?.content;
 
     try {
-      const parsed: EvaluationStandard = JSON.parse(content ?? "");
-
-      console.log(parsed);
-      return parsed;
+      const result: { job_role: string } = JSON.parse(content ?? "");
+      console.log(result);
+      return result;
     } catch (error) {
       console.log(error);
       throw new Error();
     }
   }
 
-  private getEvaluationsPrompt(
-    questions: { question_text: string; question_id: string }[],
+  private getJobRolePrompt(
+    questions: {
+      question_text: string;
+      question_id: string;
+      question_role: QuestionType;
+    }[],
   ) {
     const questionList = questions
       .map(
         (q, i) =>
-          `${i + 1}. (question_id: ${q.question_id}) question_text: ${q.question_text.trim()}`,
+          `${i + 1}. (question_text: ${q.question_text.trim()} question_role: ${q.question_role === "ai" || q.question_role === "user" ? "미정." : q.question_role}`,
       )
       .join("\n");
 
     return `
-      너는 개발 직군 기술 면접관이야. 아래는 한 지원자가 선택한 면접 질문 목록이야.
-      실제 면접이기 때문에 지원자를 검증하고, 평가하기 위한 기준을 만들어야 해.
+      너는 지금 시니어 개발자 면접관이야. 아래는 한 지원자가 선택한 기술 면접 질문 목록이야.
+
+      각 질문을 보고 이 지원자가 어떤 직무에 지원했을 가능성이 높은지 추론해줘.
+      예시는 다음과 같아: ["프론트엔드", "백엔드", "웹 풀스택", "안드로이드", "IOS", "데브옵스", "데이터 엔지니어", "AI/ML 엔지니어"]
 
       📌 수행할 일:
-      1. 이 질문들을 보고 이 지원자의 직무가 무엇일지 추론해줘. 예시: ["프론트엔드", "웹 풀스택", "백엔드", "안드로이드"]
-      2. 각 질문에 대해 아래 형식으로 평가 기준을 만들어줘:
-        - 'intent': 이 질문의 평가 목적을 작성.
-        - "core_criteria": 가장 중요하게 평가할 항목 2~3개
-        - "supplementary_criteria": 보조적으로 평가할 항목 1~2개
-        - "expected_keywords": 해당 질문의 답변에서 꼭 언급되어야 할 핵심 키워드 배열 (한글 기반, 필요시 영어 혼용)
+      1. 이 질문들을 보고 이 지원자의 직무가 무엇일지 추론해줘.
+      2. 입력한 질문 형식은 question_text, question_role이 있어.
+      - question_role은 fe, be, android, ios, 미정이 있어. 
+      - fe, be, android, ios 중 하나일 경우는 해당 질문이 프론트엔드, 백엔드, 안드로이드, IOS로 등록되었음을 뜻함.
+      - user일 경우는 "user가 생성한 질문"이라는 뜻이야. 질문의 타입은 너가 추론해야함.
+      - ai일 경우는 "ai가 생성한 질문"이라는 뜻이야. 질문의 타입은 너가 추론해야함.
+      3. 예를 들어, question_text가 "제네릭에 대해 설명해주세요.", question_role이 "android" 라는 질문이 있다고 가정하자.
+      - 제네릭에 대해 설명해주세요.라는 질문 자체는 fe, be, android, ios.... 다른 직군의 지원자 모두가 선택가능한 질문이기 때문에,
+        다른 질문들까지 모두 보고 직무를 추론해야 함.
+      - 질문들을 다 봤는데도 하나의 직무로 추론이 애매한 경우, 각 질문의 question_role을 참고해서 추론할 것.
 
-      📌 제약 조건:
-      1. 평가 기준은 반드시 위에서 추론한 직무에 맞게 생성해야 해:
-        - 예를 들면, '클래스는 무엇이고 객체는 무엇인가요?', '이벤트는 어떤 형태로 전달되나요? 터치 이벤트는 다른게 있나요?'와 같은 질문은
-          각각을 보았을 때, 어떤 직군인지를 몰라. 하지만 다른 질문들을 보았을 때, 'xml에서 view가 그려지는 과정에 대해 설명해주세요.'와 같은 질문들이 있다면,
-          앞의 질문들은 '안드로이드 개발' 직군에 맞는 평가 기준을 적용해서 평가해야 한다는 것을 알 수 있어.
-          즉, 각각의 질문별로가 아니라, 전체 질문들을 고려해서 직무를 먼저 파악한 다음, 각 질문에 대한 평가 기준을 생성해야 함.
-          
-      2. 질문의 의도에 따라 평가 기준을 잘 선정해야 해:
-        - 예를 들면, 질문이 지원자의 전공 지식이나 개발 지식의 숙지 여부에 대해 묻는 질문이라면, 주로 지원자의 지식을 검증하는 방향으로 기준과 중요도를 선정해야 하고,
-          자신의 경험이나 과거의 이러한 문제를 어떻게 해결했는지를 묻는 질문인지라면, 지원자의 과거 경험이나, 문제의 해결 과정을 검증하는 방향으로 선정해야 함.
 
-      3. core_criteria와 supplementary_criteria 안의 각 항목은 다음 구조로 작성해:
-        - key: 영어 항목명
-        - value: { description: 한글 설명, weight: 항목의 평가 비중 (0~100 중 정수) }
-        - 각 질문의 모든 항목의 weight 총합은 반드시 100이 되도록 작성해야 해.
-
-      4. expected_keywords 항목을 각 질문에 포함해줘. 답변에 포함되어야 할 핵심 키워드들을 배열 형태로 작성하며, 한국어가 기본이나 기술 용어라면 영어도 혼용 가능.
-      5. 질문에 대한 답변 시간은 최대 1분임. 질문의 난이도와 타입, 답변에 필요한 시간을 고려해서 평가기준을 선정해야 해. 
+      📌 출력 형식은 다음과 같아:
+      {
+        "job_role": "직무명"
+      }
 
       📌 절대 지켜야 할 출력 조건:
       1. 반드시 JSON 형식만 출력
       2. 코드 블럭 (\`\`\`) 사용 금지
-      3. 불필요한 설명, 서두/말미 텍스트 출력 금지
-      4. 각 질문에는 question_id와 question_text를 반드시 포함
-
-      📌 출력 예시:
-      {
-        "job_role": "백엔드",
-        "question_evaluations": [
-          {
-            "question_id": "q1",
-            "question_text": "세션과 JWT의 차이를 설명해주세요.",
-            "intent": "웹 인증 방식의 구조적 차이와 보안적 특성에 대한 이해를 평가하기 위한 질문입니다.",
-            "core_criteria": {
-              "Conceptual Understanding": {
-                "description": "세션과 JWT 구조의 차이를 명확히 설명했는가",
-                "weight": 60
-              },
-              "Security Considerations": {
-                "description": "각 방식의 보안적 특징을 설명할 수 있는가",
-                "weight": 30
-              }
-            },
-            "supplementary_criteria": {
-              "Practical Example": {
-                "description": "실제 프로젝트에서 적용한 경험을 언급했는가",
-                "weight": 10
-              }
-            },
-            "expected_keywords": ["세션", "JWT", "상태 저장", "토큰", "서버 메모리", "탈취"]
-          }
-        ]
-      }
-
+      3. 설명이나 주석 절대 금지
+      4. job_role 키는 그대로 유지
+      5. 질문 목록은 전체적으로 보고 유력한 하나의 직무만 추론하되, 사용자가 완전히 상반된 질문을 선택한 경우, "직무명1, 직무명2" 이렇게 반환.
 
       질문 목록:
       ${questionList}
@@ -149,12 +121,9 @@ export class AnalysisService {
     });
   }
 
-  async updateEvaluationStandard(
-    sessionId: string,
-    result: EvaluationStandard,
-  ) {
+  async updateJobRole(sessionId: string, result: { job_role: string }) {
     await this.sessionRepository.update(sessionId, {
-      evaluation_standard: JSON.stringify(result),
+      job_role: result.job_role,
     });
   }
 
@@ -172,16 +141,46 @@ export class AnalysisService {
     });
   }
 
-  async getEvaluationStandard(sessionId: string) {
+  async getAnalysisProgress(sessionId: string): Promise<AnalysisProgress> {
+    const statuses = await this.sessionQuestionRepository.find({
+      where: { session: { id: sessionId } },
+      select: ["analysis_status"],
+    });
+
+    const total = statuses.length;
+
+    if (statuses.length === 0) {
+      return { total: 0, done: 0, percent: 0, status: "pending" };
+    }
+
+    const done = statuses.filter(
+      (q) =>
+        q.analysis_status === "completed" || q.analysis_status === "failed",
+    ).length;
+
+    const isProcessing = statuses.some(
+      (q) => q.analysis_status === "processing",
+    );
+
+    const status =
+      done === total ? "done" : isProcessing ? "loading" : "pending";
+
+    return {
+      total,
+      done,
+      percent: Math.round((done / total) * 100),
+      status,
+    };
+  }
+
+  async getJobRole(sessionId: string) {
     const result = await this.sessionRepository.findOne({
       where: {
         id: sessionId,
       },
-      select: ["evaluation_standard"],
+      select: ["job_role"],
     });
 
-    const parsed: EvaluationStandard = JSON.parse(result.evaluation_standard);
-
-    return parsed;
+    return result.job_role;
   }
 }

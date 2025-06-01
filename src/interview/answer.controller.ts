@@ -54,13 +54,12 @@ export class AnswerController {
       objectName,
     );
 
-    const evaluationStandard =
-      await this.analysisService.getEvaluationStandard(session_id);
+    const jobRole = await this.analysisService.getJobRole(session_id);
 
     await this.flaskService.sendToAnalysisServer(
       audio,
       result.questionId,
-      evaluationStandard,
+      jobRole,
     );
 
     if (result.isLastQuestion) {

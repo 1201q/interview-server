@@ -22,7 +22,7 @@ import { FlaskModule } from "./flask/flask.module";
       password: process.env.DB_PASSWORD,
       connectString: process.env.DB_CONNECTION,
       autoLoadEntities: true,
-      synchronize: true,
+      synchronize: false,
       logging: false,
     }),
     HttpModule,

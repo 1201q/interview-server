@@ -11,9 +11,7 @@ from analysis_functions import *
 from transcribe import *
 from analysis import analyze_audio
 from io import BytesIO
-import threading
 
-import librosa
 import numpy as np
 
 import tempfile, os, requests
@@ -45,7 +43,6 @@ def new_process_in_background(
     file_bytes: bytes,
     filename: str,
     question_id: str,
-    matched_evaluation: Any,
     job_role: str,
 ):
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -109,9 +106,13 @@ def new_process_in_background(
             og_words = transcript["words"]
             corrected_words = get_correct_words_with_gpt(
                 [w["word"] for w in og_words],
-                matched_evaluation["question_text"],
+                transcript["text"],
                 job_role,
             )
+
+            sentence = " ".join(corrected_words)
+
+            print(sentence)
 
             diff_array = get_diff_array(og_words, corrected_words)
 
@@ -125,7 +126,6 @@ def new_process_in_background(
                     "result": {
                         "transcript": transcript,
                         "words": diff_array,
-                        "matched_evaluation": matched_evaluation,
                     },
                 },
             )
