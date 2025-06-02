@@ -53,10 +53,17 @@ export interface Words {
   end: number;
 }
 
+export interface Feedback {
+  feedback: string;
+  good: string[];
+  bad: string[];
+  grade: string;
+}
+
 export interface AnalysisResult {
   words: Words[];
-  matched_evaluation: EvaluationStandard;
   transcript: WhisperSttType;
+  feedback: Feedback;
 }
 
 export interface AnalysisProgress {

@@ -35,6 +35,7 @@ export class FlaskService {
   async sendToAnalysisServer(
     webm: Express.Multer.File,
     questionId: string,
+    questionText: string,
     job_role: string,
   ) {
     const baseUrl = this.configService.get<string>("ML_SERVER_URL");
@@ -45,7 +46,10 @@ export class FlaskService {
       contentType: webm.mimetype,
     });
 
+    console.log(questionText);
+
     form.append("question_id", questionId);
+    form.append("question_text", questionText);
     form.append("job_role", job_role);
 
     await lastValueFrom(

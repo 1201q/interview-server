@@ -78,7 +78,11 @@ export class AnswerService {
         { status: "completed" },
       );
 
-      return { isLastQuestion: true, questionId: currentQuestion.id };
+      return {
+        isLastQuestion: true,
+        questionId: currentQuestion.id,
+        questionText: currentQuestion.question.question_text,
+      };
     }
 
     nextQuestion.status = "ready";
@@ -87,6 +91,7 @@ export class AnswerService {
     return {
       isLastQuestion: false,
       questionId: currentQuestion.id,
+      questionText: currentQuestion.question.question_text,
       nextQuestion: {
         id: nextQuestion.id,
         order: nextQuestion.order,

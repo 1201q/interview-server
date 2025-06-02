@@ -9,10 +9,10 @@ from transcribe import transcribe_whisper
 from analysis import analyze_audio
 from io import BytesIO
 import threading
-import json
+
 from analysis_main import *
 
-import tempfile, os, requests
+import tempfile, os
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
@@ -75,13 +75,16 @@ def process_audio():
 def analyze_answer():
     file = request.files["file"]
     question_id = str(request.form["question_id"])
+    question_text = str(request.form["question_text"])
     job_role = str(request.form["job_role"])
     filename = secure_filename(file.filename)
     file_bytes = file.read()
 
+    print(question_text)
+
     threading.Thread(
         target=new_process_in_background,
-        args=(file_bytes, filename, question_id, job_role),
+        args=(file_bytes, filename, question_id, question_text, job_role),
     ).start()
 
     return jsonify({"status": "processing"}), 202

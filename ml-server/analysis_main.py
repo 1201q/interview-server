@@ -43,6 +43,7 @@ def new_process_in_background(
     file_bytes: bytes,
     filename: str,
     question_id: str,
+    question_text: str,
     job_role: str,
 ):
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -107,13 +108,12 @@ def new_process_in_background(
             corrected_words = get_correct_words_with_gpt(
                 [w["word"] for w in og_words],
                 transcript["text"],
+                question_text,
                 job_role,
             )
 
-            sentence = " ".join(corrected_words)
-
-            print(sentence)
-
+            answer = " ".join(corrected_words)
+            feedback = feedback_answer_with_gpt(question_text, answer, job_role)
             diff_array = get_diff_array(og_words, corrected_words)
 
             requests.post(
@@ -126,6 +126,7 @@ def new_process_in_background(
                     "result": {
                         "transcript": transcript,
                         "words": diff_array,
+                        "feedback": feedback,
                     },
                 },
             )

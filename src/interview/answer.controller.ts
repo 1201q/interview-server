@@ -54,11 +54,14 @@ export class AnswerController {
       objectName,
     );
 
+    console.log(result);
+
     const jobRole = await this.analysisService.getJobRole(session_id);
 
     await this.flaskService.sendToAnalysisServer(
       audio,
       result.questionId,
+      result.questionText,
       jobRole,
     );
 
