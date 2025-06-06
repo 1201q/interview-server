@@ -17,8 +17,8 @@ RUN micromamba create -n ml-env \
     -y
 
 WORKDIR /app
-COPY requirements.pip.txt .
-RUN micromamba run -n ml-env pip install -r requirements.pip.txt && \
+COPY requirements.txt .
+RUN micromamba run -n ml-env pip install -r requirements.txt && \
     micromamba clean --all --yes
 
 COPY . .
