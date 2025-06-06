@@ -9,9 +9,10 @@ from transcribe import transcribe_whisper
 from analysis import analyze_audio
 from io import BytesIO
 import threading
+import pdfplumber
 
 from analysis_main import *
-
+import io
 import tempfile, os
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
@@ -117,6 +118,25 @@ def convert_seekable():
             return jsonify({"error": "변환 실패", "msg": str(e)}), 500
         except Exception as e:
             return jsonify({"error": "서버 내부 오류", "msg": str(e)}), 500
+
+
+@app.route("/extract_text", methods=["POST"])
+def extract_text():
+    file = request.files.get("file")
+    if not file:
+        return jsonify({"message": "파일 없음"}), 400
+
+    try:
+        text = ""
+        with pdfplumber.open(io.BytesIO(file.read())) as pdf:
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
+
+        return jsonify({"result": text.strip()})
+    except Exception as e:
+        return jsonify({"message": str(e)}), 500
 
 
 if __name__ == "__main__":

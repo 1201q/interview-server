@@ -58,4 +58,25 @@ export class FlaskService {
       }),
     );
   }
+
+  async extractPdfText(
+    file: Express.Multer.File,
+    decodedFilename: string,
+  ): Promise<{ result: string }> {
+    const baseUrl = this.configService.get<string>("ML_SERVER_URL");
+
+    const form = new FormData();
+    form.append("file", Readable.from(file.buffer), {
+      filename: decodedFilename,
+      contentType: file.mimetype,
+    });
+
+    const response = await lastValueFrom(
+      this.httpService.post(`${baseUrl}/extract_text`, form, {
+        headers: form.getHeaders(),
+      }),
+    );
+
+    return response.data;
+  }
 }
