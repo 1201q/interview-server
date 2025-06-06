@@ -5,8 +5,8 @@ python-dotenv
 librosa
 pydub
 numpy
+pdfplumber
 ffmpeg-python
 scipy
 soundfile
-openai
-pdfplumber
+openai>=1.82.0

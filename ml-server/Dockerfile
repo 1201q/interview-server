@@ -2,7 +2,6 @@ FROM mambaorg/micromamba:1.4.3 AS builder
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-
 RUN micromamba create -n ml-env \
     -c conda-forge \        
     -c ets \                
@@ -15,14 +14,14 @@ RUN micromamba create -n ml-env \
     numpy \
     librosa \
     -y && \
+    micromamba run -n ml-env pip install openai==1.82.0 && \
+    micromamba run -n ml-env pip install pdfplumber  && \
     micromamba clean --all --yes
-
 
 RUN echo "source /opt/conda/etc/profile.d/conda.sh && conda activate ml-env" >> ~/.bashrc
 
 WORKDIR /app
 COPY . .
-
 
 FROM python:3.10-slim
 
