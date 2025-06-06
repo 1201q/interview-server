@@ -1,12 +1,5 @@
-flask
-requests
-gunicorn
-python-dotenv
-librosa
-pydub
-numpy
+openai==1.82.0
 pdfplumber
+pydub
 ffmpeg-python
-scipy
 soundfile
-openai>=1.82.0

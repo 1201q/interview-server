@@ -6,21 +6,21 @@ RUN micromamba create -n ml-env \
     -c conda-forge \        
     -c ets \                
     python=3.10 \
-    ets::praat-parselmouth \
     flask \
     gunicorn \
     python-dotenv \
     requests \
     numpy \
     librosa \
-    -y && \
-    micromamba run -n ml-env pip install openai==1.82.0 && \
-    micromamba run -n ml-env pip install pdfplumber  && \
-    micromamba clean --all --yes
-
-RUN echo "source /opt/conda/etc/profile.d/conda.sh && conda activate ml-env" >> ~/.bashrc
+    ffmpeg \
+    ets::praat-parselmouth \
+    -y
 
 WORKDIR /app
+COPY requirements.pip.txt .
+RUN micromamba run -n ml-env pip install -r requirements.pip.txt && \
+    micromamba clean --all --yes
+
 COPY . .
 
 FROM python:3.10-slim
@@ -32,8 +32,6 @@ WORKDIR /app
 
 
 COPY --from=builder /opt/conda/envs/ml-env /opt/conda/envs/ml-env
-
-
 ENV PATH=/opt/conda/envs/ml-env/bin:$PATH
 
 
