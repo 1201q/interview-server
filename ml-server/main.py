@@ -126,6 +126,8 @@ def extract_text():
     if not file:
         return jsonify({"message": "파일 없음"}), 400
 
+    print(file)
+
     try:
         text = ""
         with pdfplumber.open(io.BytesIO(file.read())) as pdf:

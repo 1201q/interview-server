@@ -45,6 +45,8 @@ export class PdfController {
 
     const data = await this.flaskService.extractPdfText(file, decodedFilename);
 
+    console.log(data);
+
     if (!data.result || data.result.length < 100) {
       throw new BadRequestException(
         "이력서에서 충분한 텍스트를 추출하지 못했습니다. 파일을 다시 확인해주세요.",
