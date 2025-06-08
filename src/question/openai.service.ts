@@ -1,8 +1,10 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import OpenAI from "openai";
+import * as clarinet from "clarinet";
 
 import { GenerateQuestionFromGptDto } from "./dtos/generate-question.dto";
+import { GenerateQuestionFromResumeResult } from "src/common/interfaces/common.interface";
 
 @Injectable()
 export class OpenaiService {
@@ -269,5 +271,156 @@ export class OpenaiService {
       질문 목록:
       ${questionList}
       `;
+  }
+
+  // 이력서 기반 질문 생성
+  async streamQuestionsFromResume(
+    resume: string,
+    recruitment: string,
+    onSection: (section: string, data: any[]) => void,
+  ) {
+    const prompt_text = this.getGenerateQuestionFromResumePrompt(
+      resume,
+      recruitment,
+    );
+
+    const stream = await this.openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content:
+            "당신은 어떤 직군이든 면접 질문을 만들어낼 수 있는 전문 면접관입니다.",
+        },
+        { role: "user", content: prompt_text },
+      ],
+      temperature: 0.7,
+      stream: true,
+    });
+
+    let currentSection: string | null = null;
+    let currentArray: any[] = [];
+    let insideQuestions = false;
+
+    const parser = clarinet.createStream();
+
+    parser.on("key", (key) => {
+      if (key === "questions") insideQuestions = true;
+      else if (
+        insideQuestions &&
+        ["basic", "experience", "job_related", "expertise"].includes(key)
+      ) {
+        currentSection = key;
+        currentArray = [];
+      }
+    });
+
+    parser.on("value", (val) => {
+      if (currentSection) currentArray.push(val);
+    });
+
+    parser.on("closearray", () => {
+      if (currentSection) {
+        onSection(currentSection, currentArray);
+        currentSection = null;
+        currentArray = [];
+      }
+    });
+
+    for await (const chunk of stream) {
+      const delta = chunk.choices?.[0]?.delta?.content;
+
+      console.log(delta);
+      if (delta) {
+        parser.write(delta);
+      }
+    }
+
+    parser.end();
+  }
+
+  async generateQuestionsFromResume(resume: string, recruitment: string) {
+    const prompt_text = this.getGenerateQuestionFromResumePrompt(
+      resume,
+      recruitment,
+    );
+
+    const response = await this.openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content:
+            "당신은 어떤 직군이든 면접 질문을 만들어낼 수 있는 전문 면접관입니다.",
+        },
+        { role: "user", content: prompt_text },
+      ],
+      temperature: 0.7,
+    });
+
+    const content = response.choices[0]?.message?.content;
+
+    try {
+      const parsed: { questions: GenerateQuestionFromResumeResult } =
+        JSON.parse(content ?? "");
+
+      return parsed;
+    } catch (error) {
+      console.log(error);
+      throw new Error();
+    }
+  }
+
+  private getGenerateQuestionFromResumePrompt(
+    resume: string,
+    recruitment: string,
+  ) {
+    return `
+    당신은 이력서와 채용공고를 기반으로 면접 질문을 생성하는 면접관입니다.
+
+    다음 이력서와 채용공고를 참고하여 총 30개의 면접 질문을 JSON 형식으로 생성해주세요.  
+    각 질문마다 반드시 이 질문이 이력서 또는 채용공고의 어떤 내용을 기반으로 작성되었는지를 설명하는 **"based_on"** 필드를 포함해야 합니다. 
+    출력은 반드시 **순수 JSON** 형식으로만 반환하세요. 마크다운, 주석, 설명 없이 JSON만 출력해주세요.
+
+    [이력서]
+    ${resume}
+
+    [채용공고]
+    ${recruitment}
+
+    [요청사항]
+    질문은 총 4개 섹션으로 나누어 주세요:
+
+    I. basic (기본 질문) - 3개  
+    - 예: 자기소개, 지원 동기, 장단점 등
+
+    II. experience (이력 및 경험 기반 질문) - 9개  
+    - 이력서 기반, 경험/성과/프로젝트에 대해 질문
+    - 실제 상황 질문 (예: STAR 기법 유도)
+
+    III. job_related (직무 관련 질문) - 11개  
+    - 해당 직무에서 자주 마주치는 문제 또는 역할 기반 질문
+    - 이력서 및 채용공고 기반으로 생성
+
+    IV. expertise (전문 지식 질문) - 7개  
+    - 이력서에서 언급된 도구, 개념, 이론 등에 대한 깊이 있는 질문
+
+    - 질문 30개를 4개 카테고리로 나누어 생성해주세요.
+    - 아래 JSON 형식만 반환하세요. 마크다운 코드블록 없이 출력해주세요.
+    {
+        "questions": {
+        "experience": [
+            {
+                "question": "Redis를 활용한 동시성 문제 해결 경험에 대해 자세히 설명해 주세요.",
+                "based_on": "이력서 상에서 'Redis를 활용하여 세션 동기화 및 잠금 처리 구현'한 경험을 언급하셨습니다."
+            },
+            {
+                "question": "CI/CD 구축 경험에 대해 설명해 주시고, GitHub Actions를 사용한 이유는 무엇인가요?",
+                "based_on": "이력서에 'GitHub Actions 기반 CI/CD 파이프라인 구축 및 자동 배포 구현'이라고 명시되어 있습니다."
+            }
+            ],
+        ...
+        }
+    }`;
   }
 }

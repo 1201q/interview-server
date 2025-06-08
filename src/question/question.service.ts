@@ -1,12 +1,16 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, Repository } from "typeorm";
 
 import { v4 as uuidv4 } from "uuid";
-import { RoleType } from "../common/interfaces/common.interface";
+import {
+  GenerateQuestionFromResumeResult,
+  RoleType,
+} from "../common/interfaces/common.interface";
 
 import { BookmarkedQuestion } from "./entities/bookmarked.question.entity";
 import { Question } from "./entities/question.entity";
+import { GeneratedQuestion } from "./entities/generated.question.entity";
 
 @Injectable()
 export class QuestionService {
@@ -15,6 +19,9 @@ export class QuestionService {
 
     @InjectRepository(Question)
     private readonly questionRepository: Repository<Question>,
+
+    @InjectRepository(GeneratedQuestion)
+    private readonly generatedQuestionRepository: Repository<GeneratedQuestion>,
   ) {}
 
   async getAdminCreatedQuestionsByRole(role: RoleType): Promise<Question[]> {

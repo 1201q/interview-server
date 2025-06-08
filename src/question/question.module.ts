@@ -12,14 +12,17 @@ import { OpenaiService } from "./openai.service";
 
 import { PdfController } from "./pdf.controller";
 import { FlaskModule } from "src/flask/flask.module";
+import { GeneratedQuestion } from "./entities/generated.question.entity";
+import { GenerationController } from "./generate.controller";
+import { GenerationService } from "./generate.service";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([BookmarkedQuestion, Question]),
+    TypeOrmModule.forFeature([BookmarkedQuestion, Question, GeneratedQuestion]),
     AuthModule,
     FlaskModule,
   ],
-  providers: [QuestionService, OpenaiService],
-  controllers: [QuestionController, PdfController],
+  providers: [QuestionService, OpenaiService, GenerationService],
+  controllers: [QuestionController, PdfController, GenerationController],
 })
 export class QuestionModule {}

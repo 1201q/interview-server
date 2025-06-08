@@ -6,6 +6,7 @@ import {
   Post,
   Query,
   Req,
+  Res,
   UseGuards,
 } from "@nestjs/common";
 import {
@@ -15,7 +16,7 @@ import {
 import { GetQuestionDto } from "./dtos/get-question.dto";
 
 import { JwtAuthGuard } from "src/auth/guard/jwt-auh.guard";
-import { Request } from "express";
+import { Request, Response } from "express";
 import { AuthService } from "src/auth/auth.service";
 import { CreateUserQuestionArrayDto } from "./dtos/create-user-question.dto";
 import { Question } from "./entities/question.entity";

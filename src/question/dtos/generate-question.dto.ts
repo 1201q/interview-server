@@ -1,4 +1,10 @@
-import { IsIn, IsNotEmpty, IsString, MaxLength } from "class-validator";
+import {
+  IsIn,
+  IsNotEmpty,
+  IsString,
+  MaxLength,
+  MinLength,
+} from "class-validator";
 import { GenerateQuestionType } from "../../common/interfaces/common.interface";
 
 export class GenerateQuestionFromGptDto {
@@ -20,4 +26,16 @@ export class GenerateQuestionFromGptDto {
     "experience",
   ])
   question_type: GenerateQuestionType;
+}
+
+export class GenerateQuestionFromResumeDto {
+  @IsString()
+  @MinLength(100)
+  @MaxLength(10000)
+  resume_text: string;
+
+  @IsString()
+  @MinLength(100)
+  @MaxLength(1000)
+  recruitment_text: string;
 }
