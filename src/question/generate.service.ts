@@ -1,11 +1,12 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
 import { GeneratedQuestion } from "./entities/generated.question.entity";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { OpenaiService } from "./openai.service";
-import { GenerateQuestionFromResumeResult } from "src/common/interfaces/common.interface";
+import { GeneratedQuestionFromResumeResult } from "src/common/interfaces/common.interface";
+import { GeneratedQuestionItem } from "./entities/generated.question.items.entity";
 
 @Injectable()
 export class GenerationService {
@@ -14,6 +15,9 @@ export class GenerationService {
 
     @InjectRepository(GeneratedQuestion)
     private generatedQuestionRepository: Repository<GeneratedQuestion>,
+
+    @InjectRepository(GeneratedQuestionItem)
+    private generatedQuestionItemRepository: Repository<GeneratedQuestionItem>,
   ) {}
 
   // 이력서
@@ -43,7 +47,18 @@ export class GenerationService {
         data.recruitment_text,
       );
 
-      data.result_json = JSON.stringify(response);
+      const items = response.questions.map((q) => {
+        const item = this.generatedQuestionItemRepository.create({
+          question: q.question,
+          based_on: q.based_on,
+          section: q.section,
+          generated_question: data,
+        });
+        return item;
+      });
+
+      await this.generatedQuestionItemRepository.save(items);
+
       data.status = "completed";
       await this.generatedQuestionRepository.save(data);
 
@@ -57,18 +72,21 @@ export class GenerationService {
 
   async getGeneratedQuestions(id: string) {
     const result = await this.generatedQuestionRepository.findOne({
-      where: {
-        id: id,
-      },
-      select: ["result_json"],
+      where: { id },
+      relations: ["items"],
     });
 
-    const parsed: { questions: GenerateQuestionFromResumeResult } = JSON.parse(
-      result.result_json,
-    );
+    if (!result) {
+      throw new NotFoundException("해당 ID의 생성 요청이 존재하지 않습니다.");
+    }
 
-    console.log(parsed);
+    const questions = result.items.map((item) => ({
+      id: item.id,
+      question: item.question,
+      based_on: item.based_on,
+      section: item.section,
+    }));
 
-    return parsed;
+    return { questions };
   }
 }

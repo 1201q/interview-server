@@ -2,8 +2,10 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from "typeorm";
+import { GeneratedQuestionItem } from "./generated.question.items.entity";
 
 @Entity({ name: "generated_questions" })
 export class GeneratedQuestion {
@@ -19,8 +21,10 @@ export class GeneratedQuestion {
   @Column({ default: "pending", length: 10 })
   status: "pending" | "working" | "completed" | "failed";
 
-  @Column({ type: "clob", nullable: true })
-  result_json: string;
+  @OneToMany(() => GeneratedQuestionItem, (item) => item.generated_question, {
+    cascade: true,
+  })
+  items: GeneratedQuestionItem[];
 
   @CreateDateColumn({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })
   created_at: Date;

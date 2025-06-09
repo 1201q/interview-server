@@ -15,10 +15,16 @@ import { FlaskModule } from "src/flask/flask.module";
 import { GeneratedQuestion } from "./entities/generated.question.entity";
 import { GenerationController } from "./generate.controller";
 import { GenerationService } from "./generate.service";
+import { GeneratedQuestionItem } from "./entities/generated.question.items.entity";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([BookmarkedQuestion, Question, GeneratedQuestion]),
+    TypeOrmModule.forFeature([
+      BookmarkedQuestion,
+      Question,
+      GeneratedQuestion,
+      GeneratedQuestionItem,
+    ]),
     AuthModule,
     FlaskModule,
   ],

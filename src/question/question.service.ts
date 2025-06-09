@@ -3,10 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, Repository } from "typeorm";
 
 import { v4 as uuidv4 } from "uuid";
-import {
-  GenerateQuestionFromResumeResult,
-  RoleType,
-} from "../common/interfaces/common.interface";
+import { RoleType } from "../common/interfaces/common.interface";
 
 import { BookmarkedQuestion } from "./entities/bookmarked.question.entity";
 import { Question } from "./entities/question.entity";

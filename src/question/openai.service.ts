@@ -4,7 +4,7 @@ import OpenAI from "openai";
 import * as clarinet from "clarinet";
 
 import { GenerateQuestionFromGptDto } from "./dtos/generate-question.dto";
-import { GenerateQuestionFromResumeResult } from "src/common/interfaces/common.interface";
+import { GeneratedQuestionFromResumeResult } from "src/common/interfaces/common.interface";
 
 @Injectable()
 export class OpenaiService {
@@ -361,7 +361,7 @@ export class OpenaiService {
     const content = response.choices[0]?.message?.content;
 
     try {
-      const parsed: { questions: GenerateQuestionFromResumeResult } =
+      const parsed: { questions: GeneratedQuestionFromResumeResult[] } =
         JSON.parse(content ?? "");
 
       return parsed;
@@ -380,6 +380,8 @@ export class OpenaiService {
 
     다음 이력서와 채용공고를 참고하여 총 30개의 면접 질문을 JSON 형식으로 생성해주세요.  
     각 질문마다 반드시 이 질문이 이력서 또는 채용공고의 어떤 내용을 기반으로 작성되었는지를 설명하는 **"based_on"** 필드를 포함해야 합니다. 
+    based_on 필드는 이력서의 내용을 기반으로 작성했다면 문장에 '이력서'라는 단어를, 채용공고 기반이라면 '채용공고'라는 단어를 꼭 포함하세요.
+
     출력은 반드시 **순수 JSON** 형식으로만 반환하세요. 마크다운, 주석, 설명 없이 JSON만 출력해주세요.
 
     [이력서]
@@ -408,19 +410,18 @@ export class OpenaiService {
     - 질문 30개를 4개 카테고리로 나누어 생성해주세요.
     - 아래 JSON 형식만 반환하세요. 마크다운 코드블록 없이 출력해주세요.
     {
-        "questions": {
-        "experience": [
+        "questions": [
             {
                 "question": "Redis를 활용한 동시성 문제 해결 경험에 대해 자세히 설명해 주세요.",
-                "based_on": "이력서 상에서 'Redis를 활용하여 세션 동기화 및 잠금 처리 구현'한 경험을 언급하셨습니다."
+                "based_on": "이력서 상에서 'Redis를 활용하여 세션 동기화 및 잠금 처리 구현'한 경험을 언급하셨습니다.",
+                "section" : "experience"
             },
             {
                 "question": "CI/CD 구축 경험에 대해 설명해 주시고, GitHub Actions를 사용한 이유는 무엇인가요?",
-                "based_on": "이력서에 'GitHub Actions 기반 CI/CD 파이프라인 구축 및 자동 배포 구현'이라고 명시되어 있습니다."
+                "based_on": "이력서에 'GitHub Actions 기반 CI/CD 파이프라인 구축 및 자동 배포 구현'이라고 명시되어 있습니다.",
+                "section" : "experience"
             }
-            ],
-        ...
-        }
+      ]
     }`;
   }
 }

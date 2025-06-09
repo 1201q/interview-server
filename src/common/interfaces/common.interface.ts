@@ -15,14 +15,8 @@ export type GenerateQuestionType =
   | "implementation"
   | "experience";
 
-export interface GenerateQuestionFromResumeResult {
-  basic: QuestionData[];
-  experience: QuestionData[];
-  job_related: QuestionData[];
-  expertise: QuestionData[];
-}
-
-export interface QuestionData {
+export interface GeneratedQuestionFromResumeResult {
   question: string;
   based_on: string;
+  section: "basic" | "experience" | "job_related" | "expertise";
 }
