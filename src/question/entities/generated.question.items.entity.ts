@@ -1,5 +1,5 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
-import { GeneratedQuestion } from "./generated.question.entity";
+import { QuestionGenerationRequest } from "./question.generation.request";
 
 @Entity({ name: "generated_question_items" })
 export class GeneratedQuestionItem {
@@ -15,8 +15,8 @@ export class GeneratedQuestionItem {
   @Column()
   section: "basic" | "experience" | "job_related" | "expertise";
 
-  @ManyToOne(() => GeneratedQuestion, (q) => q.items, {
+  @ManyToOne(() => QuestionGenerationRequest, (q) => q.items, {
     onDelete: "CASCADE",
   })
-  generated_question: GeneratedQuestion;
+  request: QuestionGenerationRequest;
 }

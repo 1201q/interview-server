@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { IsNumber, IsUUID, ValidateNested } from "class-validator";
+import { IsNumber, IsOptional, IsUUID, ValidateNested } from "class-validator";
 
 export class InterviewSessionDto {
   @IsUUID()
@@ -35,4 +35,8 @@ export class CreateInterviewSessionArrayDto {
   @ValidateNested({ each: true })
   @Type(() => CreateInterviewSessionDto)
   questions: CreateInterviewSessionDto[];
+
+  @IsUUID()
+  @IsOptional()
+  generation_request_id?: string;
 }

@@ -12,7 +12,7 @@ import { OpenaiService } from "./openai.service";
 
 import { PdfController } from "./pdf.controller";
 import { FlaskModule } from "src/flask/flask.module";
-import { GeneratedQuestion } from "./entities/generated.question.entity";
+import { QuestionGenerationRequest } from "./entities/question.generation.request";
 import { GenerationController } from "./generate.controller";
 import { GenerationService } from "./generate.service";
 import { GeneratedQuestionItem } from "./entities/generated.question.items.entity";
@@ -22,7 +22,7 @@ import { GeneratedQuestionItem } from "./entities/generated.question.items.entit
     TypeOrmModule.forFeature([
       BookmarkedQuestion,
       Question,
-      GeneratedQuestion,
+      QuestionGenerationRequest,
       GeneratedQuestionItem,
     ]),
     AuthModule,

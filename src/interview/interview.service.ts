@@ -5,6 +5,7 @@ import { InterviewSession } from "./entities/interview.session.entity";
 import { Repository } from "typeorm";
 import { InterviewSessionQuestion } from "./entities/interview.session.question.entity";
 import { Question } from "src/question/entities/question.entity";
+import { NewInterviewAnswer } from "./entities/new.interview.answer.entity";
 
 @Injectable()
 export class InterviewService {
@@ -17,6 +18,9 @@ export class InterviewService {
 
     @InjectRepository(Question)
     private questionRepository: Repository<Question>,
+
+    @InjectRepository(NewInterviewAnswer)
+    private interviewAnswerRepo: Repository<NewInterviewAnswer>,
   ) {}
 
   async getActiveSessionBySessionId(userId: string, sessionId: string) {
@@ -45,6 +49,14 @@ export class InterviewService {
 
   async getQuestionsBySessionId(sessionId: string) {
     return this.sessionQuestionRepository.find({
+      where: {
+        session: { id: sessionId },
+      },
+    });
+  }
+
+  async newGetQuestionsBySessionId(sessionId: string) {
+    return this.interviewAnswerRepo.find({
       where: {
         session: { id: sessionId },
       },

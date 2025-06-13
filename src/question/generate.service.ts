@@ -1,11 +1,10 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
 
-import { GeneratedQuestion } from "./entities/generated.question.entity";
+import { QuestionGenerationRequest } from "./entities/question.generation.request";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { OpenaiService } from "./openai.service";
-import { GeneratedQuestionFromResumeResult } from "src/common/interfaces/common.interface";
+
 import { GeneratedQuestionItem } from "./entities/generated.question.items.entity";
 
 @Injectable()
@@ -13,17 +12,19 @@ export class GenerationService {
   constructor(
     private readonly openaiService: OpenaiService,
 
-    @InjectRepository(GeneratedQuestion)
-    private generatedQuestionRepository: Repository<GeneratedQuestion>,
+    @InjectRepository(QuestionGenerationRequest)
+    private generatedQuestionRepository: Repository<QuestionGenerationRequest>,
 
     @InjectRepository(GeneratedQuestionItem)
     private generatedQuestionItemRepository: Repository<GeneratedQuestionItem>,
   ) {}
 
   // 이력서
-  async createGenerationFromResume(question: Partial<GeneratedQuestion>) {
+  async createGenerationFromResume(
+    question: Partial<QuestionGenerationRequest>,
+  ) {
     try {
-      const newQuestion = new GeneratedQuestion();
+      const newQuestion = new QuestionGenerationRequest();
       newQuestion.resume_text = question.resume_text;
       newQuestion.recruitment_text = question.recruitment_text;
 
@@ -35,7 +36,7 @@ export class GenerationService {
     }
   }
 
-  async createGenerationRequest(question: Partial<GeneratedQuestion>) {
+  async createGenerationRequest(question: Partial<QuestionGenerationRequest>) {
     const data = await this.createGenerationFromResume(question);
 
     data.status = "working";
@@ -52,7 +53,7 @@ export class GenerationService {
           question: q.question,
           based_on: q.based_on,
           section: q.section,
-          generated_question: data,
+          request: data,
         });
         return item;
       });
@@ -75,6 +76,8 @@ export class GenerationService {
       where: { id },
       relations: ["items"],
     });
+
+    console.log(result);
 
     if (!result) {
       throw new NotFoundException("해당 ID의 생성 요청이 존재하지 않습니다.");

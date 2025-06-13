@@ -7,8 +7,8 @@ import {
 } from "typeorm";
 import { GeneratedQuestionItem } from "./generated.question.items.entity";
 
-@Entity({ name: "generated_questions" })
-export class GeneratedQuestion {
+@Entity({ name: "question_generation_requests" })
+export class QuestionGenerationRequest {
   @PrimaryGeneratedColumn("uuid")
   id: string;
 
@@ -21,7 +21,7 @@ export class GeneratedQuestion {
   @Column({ default: "pending", length: 10 })
   status: "pending" | "working" | "completed" | "failed";
 
-  @OneToMany(() => GeneratedQuestionItem, (item) => item.generated_question, {
+  @OneToMany(() => GeneratedQuestionItem, (item) => item.request, {
     cascade: true,
   })
   items: GeneratedQuestionItem[];

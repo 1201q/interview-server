@@ -17,6 +17,10 @@ import { AnswerController } from "./answer.controller";
 import { AnswerService } from "./answer.service";
 import { AnalysisService } from "./analysis.service";
 import { SseService } from "./sse.service";
+import { NewInterviewSession } from "./entities/new.interview.session.entity";
+import { NewInterviewAnswer } from "./entities/new.interview.answer.entity";
+import { GeneratedQuestionItem } from "src/question/entities/generated.question.items.entity";
+import { QuestionGenerationRequest } from "src/question/entities/question.generation.request";
 
 @Module({
   imports: [
@@ -24,6 +28,10 @@ import { SseService } from "./sse.service";
       InterviewSession,
       InterviewSessionQuestion,
       Question,
+      GeneratedQuestionItem,
+      QuestionGenerationRequest,
+      NewInterviewSession,
+      NewInterviewAnswer,
     ]),
     AuthModule,
     OciUploadModule,

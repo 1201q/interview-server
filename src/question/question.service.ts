@@ -7,7 +7,7 @@ import { RoleType } from "../common/interfaces/common.interface";
 
 import { BookmarkedQuestion } from "./entities/bookmarked.question.entity";
 import { Question } from "./entities/question.entity";
-import { GeneratedQuestion } from "./entities/generated.question.entity";
+import { QuestionGenerationRequest } from "./entities/question.generation.request";
 
 @Injectable()
 export class QuestionService {
@@ -17,8 +17,8 @@ export class QuestionService {
     @InjectRepository(Question)
     private readonly questionRepository: Repository<Question>,
 
-    @InjectRepository(GeneratedQuestion)
-    private readonly generatedQuestionRepository: Repository<GeneratedQuestion>,
+    @InjectRepository(QuestionGenerationRequest)
+    private readonly generatedQuestionRepository: Repository<QuestionGenerationRequest>,
   ) {}
 
   async getAdminCreatedQuestionsByRole(role: RoleType): Promise<Question[]> {
