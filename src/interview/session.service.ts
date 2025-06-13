@@ -5,10 +5,8 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 
-import { InterviewSession } from "./entities/interview.session.entity";
 import { In, Repository } from "typeorm";
-import { InterviewSessionQuestion } from "./entities/interview.session.question.entity";
-import { Question } from "src/question/entities/question.entity";
+
 import { NewInterviewSession } from "./entities/new.interview.session.entity";
 import { NewInterviewAnswer } from "./entities/new.interview.answer.entity";
 import { GeneratedQuestionItem } from "src/question/entities/generated.question.items.entity";
@@ -17,15 +15,6 @@ import { QuestionGenerationRequest } from "src/question/entities/question.genera
 @Injectable()
 export class SessionService {
   constructor(
-    @InjectRepository(InterviewSession)
-    private sessionRepository: Repository<InterviewSession>,
-
-    @InjectRepository(InterviewSessionQuestion)
-    private sessionQuestionRepository: Repository<InterviewSessionQuestion>,
-
-    @InjectRepository(Question)
-    private questionRepository: Repository<Question>,
-
     @InjectRepository(QuestionGenerationRequest)
     private questionGenerationReqRepo: Repository<QuestionGenerationRequest>,
 

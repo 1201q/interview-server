@@ -10,15 +10,12 @@ import { InterviewService } from "./interview.service";
 import { AuthService } from "src/auth/auth.service";
 
 import { Request } from "express";
-import { SseService } from "./sse.service";
-import { map, Observable } from "rxjs";
 
 @Controller("interview/session")
 export class InterviewController {
   constructor(
     private readonly interviewService: InterviewService,
     private readonly authService: AuthService,
-    private readonly sseService: SseService,
   ) {}
 
   @Get(":session_id")
@@ -41,17 +38,5 @@ export class InterviewController {
     }
 
     return session;
-  }
-
-  @Sse("stream/:session_id")
-  stream(
-    @Param("session_id") sessionId: string,
-  ): Observable<{ data: any; type: string }> {
-    return this.sseService.getInterviewSeesionStatusStream(sessionId).pipe(
-      map((data) => ({
-        type: "status",
-        data,
-      })),
-    );
   }
 }

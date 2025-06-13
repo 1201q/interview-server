@@ -4,7 +4,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { InterviewSession } from "./entities/interview.session.entity";
 import { Repository } from "typeorm";
 import { InterviewSessionQuestion } from "./entities/interview.session.question.entity";
-import { Question } from "src/question/entities/question.entity";
+
 import { NewInterviewAnswer } from "./entities/new.interview.answer.entity";
 
 @Injectable()
@@ -15,9 +15,6 @@ export class InterviewService {
 
     @InjectRepository(InterviewSessionQuestion)
     private sessionQuestionRepository: Repository<InterviewSessionQuestion>,
-
-    @InjectRepository(Question)
-    private questionRepository: Repository<Question>,
 
     @InjectRepository(NewInterviewAnswer)
     private interviewAnswerRepo: Repository<NewInterviewAnswer>,
