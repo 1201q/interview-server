@@ -174,6 +174,7 @@ export class AnswerService {
         id: nextQuestion.id,
         order: nextQuestion.order,
         text: nextQuestion.question.question,
+        section: nextQuestion.question.section,
       },
     };
   }

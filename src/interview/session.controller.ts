@@ -13,7 +13,7 @@ import { AnalysisService } from "./analysis.service";
 export class SessionController {
   constructor(
     private readonly sessionService: SessionService,
-    private readonly analysisService: AnalysisService,
+
     private readonly interviewService: InterviewService,
     private readonly authService: AuthService,
   ) {}
@@ -134,6 +134,7 @@ export class SessionController {
       question: {
         question_id: question.id,
         question_text: question.text,
+        section: question.section,
       },
       current_order: question.order,
       total_questions: totalCount,

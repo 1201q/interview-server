@@ -143,6 +143,7 @@ export class AnswerController {
       question: {
         question_id: result.nextQuestion.id,
         question_text: result.nextQuestion.text,
+        section: result.nextQuestion.section,
       },
       current_order: result.nextQuestion.order,
     };

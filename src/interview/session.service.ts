@@ -242,6 +242,7 @@ export class SessionService {
         id: firstQuestion.id,
         text: firstQuestion.question.question,
         order: firstQuestion.order,
+        section: firstQuestion.question.section,
       },
       totalCount: totalCount,
     };
