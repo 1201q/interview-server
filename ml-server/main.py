@@ -67,6 +67,8 @@ def process_audio():
 
         convert_webm_to_wav(webm_path, wav_path)
         transcript = transcribe_whisper(wav_path)
+
+        print(transcript)
         analysis = analyze_audio(wav_path, transcript["text"], transcript["duration"])
 
         return jsonify({"transcript": transcript, "analysis": analysis})
