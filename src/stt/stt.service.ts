@@ -29,7 +29,15 @@ export class SttService {
     try {
       const response = await axios.post(
         "https://api.openai.com/v1/realtime/transcription_sessions",
-        { input_audio_transcription: { model: "whisper-1", language: "ko" } },
+        {
+          input_audio_transcription: {
+            model: "gpt-4o-transcribe",
+            language: "ko",
+          },
+          input_audio_noise_reduction: {
+            type: "near_field",
+          },
+        },
         {
           headers: {
             Authorization: `Bearer ${this.configService.get("OPENAI_API_KEY")}`,
