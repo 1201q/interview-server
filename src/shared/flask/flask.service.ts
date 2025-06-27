@@ -3,7 +3,6 @@ import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import * as FormData from "form-data";
 import { lastValueFrom } from "rxjs";
-import { EvaluationStandard } from "src/common/interfaces/analysis.interface";
 import { Readable } from "stream";
 
 @Injectable()

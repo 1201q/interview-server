@@ -7,7 +7,7 @@ import {
 } from "typeorm";
 
 import { NewInterviewSession } from "./new.interview.session.entity";
-import { GeneratedQuestionItem } from "src/question/entities/generated.question.items.entity";
+import { GeneratedQuestionItem } from "src/question-generator/entities/generated.question.items.entity";
 
 @Entity({ name: "new_interview_answers" })
 export class NewInterviewAnswer {

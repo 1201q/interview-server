@@ -14,7 +14,7 @@ import { InterviewSessionWithQuestionIdDto } from "./dtos/session.dto";
 import { AuthService } from "src/auth/auth.service";
 
 import { FileInterceptor } from "@nestjs/platform-express";
-import { FlaskService } from "src/flask/flask.service";
+import { FlaskService } from "src/shared/flask/flask.service";
 import { AnswerService } from "./answer.service";
 import { AnalysisService } from "./analysis.service";
 

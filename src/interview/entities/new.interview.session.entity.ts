@@ -8,7 +8,7 @@ import {
   UpdateDateColumn,
 } from "typeorm";
 
-import { QuestionGenerationRequest } from "src/question/entities/question.generation.request";
+import { QuestionGenerationRequest } from "src/question-generator/entities/question.generation.request";
 import { NewInterviewAnswer } from "./new.interview.answer.entity";
 
 @Entity({ name: "new_interview_sessions" })

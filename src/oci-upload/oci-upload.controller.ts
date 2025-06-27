@@ -6,7 +6,7 @@ import {
 } from "@nestjs/common";
 import { OciUploadService } from "./oci-upload.service";
 import { FileInterceptor } from "@nestjs/platform-express";
-import { FlaskService } from "src/flask/flask.service";
+import { FlaskService } from "src/shared/flask/flask.service";
 
 @Controller("oci-upload")
 export class OciUploadController {

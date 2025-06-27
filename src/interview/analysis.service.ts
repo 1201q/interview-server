@@ -1,25 +1,25 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 
-import { InterviewSession } from "./entities/interview.session.entity";
 import { Repository } from "typeorm";
-import { InterviewSessionQuestion } from "./entities/interview.session.question.entity";
 
 import { ConfigService } from "@nestjs/config";
 import OpenAI from "openai";
 import { QuestionType } from "src/common/interfaces/common.interface";
 import { AnalysisProgress } from "src/common/interfaces/analysis.interface";
+import { NewInterviewSession } from "./entities/new.interview.session.entity";
+import { NewInterviewAnswer } from "./entities/new.interview.answer.entity";
 
 @Injectable()
 export class AnalysisService {
   private openai: OpenAI;
 
   constructor(
-    @InjectRepository(InterviewSession)
-    private sessionRepository: Repository<InterviewSession>,
+    @InjectRepository(NewInterviewSession)
+    private sessionRepository: Repository<NewInterviewSession>,
 
-    @InjectRepository(InterviewSessionQuestion)
-    private sessionQuestionRepository: Repository<InterviewSessionQuestion>,
+    @InjectRepository(NewInterviewAnswer)
+    private sessionQuestionRepository: Repository<NewInterviewAnswer>,
     private readonly configService: ConfigService,
   ) {
     this.openai = new OpenAI({
@@ -121,12 +121,6 @@ export class AnalysisService {
     });
   }
 
-  async updateJobRole(sessionId: string, result: { job_role: string }) {
-    await this.sessionRepository.update(sessionId, {
-      job_role: result.job_role,
-    });
-  }
-
   async markAnalysisFailed(questionId: string) {
     await this.sessionQuestionRepository.update(questionId, {
       analysis_status: "failed",
@@ -171,16 +165,5 @@ export class AnalysisService {
       percent: Math.round((done / total) * 100),
       status,
     };
-  }
-
-  async getJobRole(sessionId: string) {
-    const result = await this.sessionRepository.findOne({
-      where: {
-        id: sessionId,
-      },
-      select: ["job_role"],
-    });
-
-    return result.job_role;
   }
 }

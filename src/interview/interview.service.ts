@@ -1,20 +1,19 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 
-import { InterviewSession } from "./entities/interview.session.entity";
 import { Repository } from "typeorm";
-import { InterviewSessionQuestion } from "./entities/interview.session.question.entity";
 
 import { NewInterviewAnswer } from "./entities/new.interview.answer.entity";
+import { NewInterviewSession } from "./entities/new.interview.session.entity";
 
 @Injectable()
 export class InterviewService {
   constructor(
-    @InjectRepository(InterviewSession)
-    private sessionRepository: Repository<InterviewSession>,
+    @InjectRepository(NewInterviewSession)
+    private sessionRepository: Repository<NewInterviewSession>,
 
-    @InjectRepository(InterviewSessionQuestion)
-    private sessionQuestionRepository: Repository<InterviewSessionQuestion>,
+    @InjectRepository(NewInterviewAnswer)
+    private sessionQuestionRepository: Repository<NewInterviewAnswer>,
 
     @InjectRepository(NewInterviewAnswer)
     private interviewAnswerRepo: Repository<NewInterviewAnswer>,
@@ -27,11 +26,6 @@ export class InterviewService {
         id: sessionId,
       },
       relations: ["questions", "questions.question"],
-      order: {
-        questions: {
-          order: "ASC",
-        },
-      },
     });
   }
 

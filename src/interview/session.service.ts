@@ -9,8 +9,8 @@ import { In, Repository } from "typeorm";
 
 import { NewInterviewSession } from "./entities/new.interview.session.entity";
 import { NewInterviewAnswer } from "./entities/new.interview.answer.entity";
-import { GeneratedQuestionItem } from "src/question/entities/generated.question.items.entity";
-import { QuestionGenerationRequest } from "src/question/entities/question.generation.request";
+import { GeneratedQuestionItem } from "src/question-generator/entities/generated.question.items.entity";
+import { QuestionGenerationRequest } from "src/question-generator/entities/question.generation.request";
 
 @Injectable()
 export class SessionService {

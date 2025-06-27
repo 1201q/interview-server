@@ -3,12 +3,12 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { QuestionGenerationRequest } from "./entities/question.generation.request";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
-import { OpenaiService } from "./openai.service";
 
 import { GeneratedQuestionItem } from "./entities/generated.question.items.entity";
+import { OpenaiService } from "src/shared/openai/openai.service";
 
 @Injectable()
-export class GenerationService {
+export class QuestionGeneratorService {
   constructor(
     private readonly openaiService: OpenaiService,
 
@@ -43,7 +43,7 @@ export class GenerationService {
     await this.generatedQuestionRepository.save(data);
 
     try {
-      const response = await this.openaiService.generateQuestionsFromResume(
+      const response = await this.openaiService.questionGenerator(
         data.resume_text,
         data.recruitment_text,
       );
@@ -76,8 +76,6 @@ export class GenerationService {
       where: { id },
       relations: ["items"],
     });
-
-    console.log(result);
 
     if (!result) {
       throw new NotFoundException("해당 ID의 생성 요청이 존재하지 않습니다.");

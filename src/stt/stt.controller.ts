@@ -1,7 +1,5 @@
 import {
-  Body,
   Controller,
-  Get,
   Post,
   Req,
   UploadedFile,
@@ -11,14 +9,12 @@ import { SttService } from "./stt.service";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { Request } from "express";
 import { AuthService } from "src/auth/auth.service";
-import { HttpService } from "@nestjs/axios";
 
 @Controller("stt")
 export class SttController {
   constructor(
     private readonly sttService: SttService,
     private readonly authService: AuthService,
-    private readonly httpService: HttpService,
   ) {}
 
   @Post("upload")

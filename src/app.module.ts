@@ -5,13 +5,14 @@ import { ConfigModule } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AuthModule } from "./auth/auth.module";
 import { UserModule } from "./user/user.module";
-import { QuestionModule } from "./question/question.module";
+import { QuestionGeneratorModule } from "./question-generator/question-generator.module";
 import { SttModule } from "./stt/stt.module";
 import { RedisModule } from "./common/redis/redis.module";
 import { InterviewModule } from "./interview/interview.module";
 import { OciUploadModule } from "./oci-upload/oci-upload.module";
 import { HttpModule } from "@nestjs/axios";
-import { FlaskModule } from "./flask/flask.module";
+import { FlaskModule } from "./shared/flask/flask.module";
+import { OpenaiModule } from "./shared/openai/openai.module";
 
 @Module({
   imports: [
@@ -28,12 +29,13 @@ import { FlaskModule } from "./flask/flask.module";
     HttpModule,
     AuthModule,
     UserModule,
-    QuestionModule,
+    QuestionGeneratorModule,
     SttModule,
     RedisModule,
     InterviewModule,
     OciUploadModule,
     FlaskModule,
+    OpenaiModule,
   ],
   controllers: [AppController],
   providers: [AppService],
