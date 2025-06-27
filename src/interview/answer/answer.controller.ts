@@ -7,16 +7,16 @@ import {
   UseInterceptors,
 } from "@nestjs/common";
 
-import { OciUploadService } from "src/oci-upload/oci-upload.service";
+import { OciUploadService } from "src/shared/oci-upload/oci-upload.service";
 
 import { Request } from "express";
-import { InterviewSessionWithQuestionIdDto } from "./dtos/session.dto";
+import { InterviewSessionWithQuestionIdDto } from "../dtos/session.dto";
 import { AuthService } from "src/auth/auth.service";
 
 import { FileInterceptor } from "@nestjs/platform-express";
 import { FlaskService } from "src/shared/flask/flask.service";
 import { AnswerService } from "./answer.service";
-import { AnalysisService } from "./analysis.service";
+import { AnalysisService } from "../analysis.service";
 
 @Controller("answer")
 export class AnswerController {
@@ -25,12 +25,11 @@ export class AnswerController {
     private readonly authService: AuthService,
     private readonly flaskService: FlaskService,
     private readonly answerService: AnswerService,
-    private readonly analysisService: AnalysisService,
   ) {}
 
   @Patch("submit")
   @UseInterceptors(FileInterceptor("audio"))
-  async newsubmitAnswer(
+  async submitAnswer(
     @Req() req: Request,
     @UploadedFile() audio: Express.Multer.File,
     @Body() body: InterviewSessionWithQuestionIdDto,
@@ -80,7 +79,7 @@ export class AnswerController {
   }
 
   @Patch("start")
-  async newstartAnswer(
+  async startAnswer(
     @Req() req: Request,
     @Body() body: InterviewSessionWithQuestionIdDto,
   ) {

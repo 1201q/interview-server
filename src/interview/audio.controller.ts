@@ -1,6 +1,6 @@
 import { Controller, Get, Param, Res } from "@nestjs/common";
 import { Response } from "express";
-import { OciUploadService } from "src/oci-upload/oci-upload.service";
+import { OciUploadService } from "src/shared/oci-upload/oci-upload.service";
 import { HttpService } from "@nestjs/axios";
 import { InterviewService } from "./interview.service";
 

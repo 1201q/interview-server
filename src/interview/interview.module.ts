@@ -4,15 +4,15 @@ import { InterviewController } from "./interview.controller";
 import { TypeOrmModule } from "@nestjs/typeorm";
 
 import { AuthModule } from "src/auth/auth.module";
-import { OciUploadModule } from "src/oci-upload/oci-upload.module";
+import { OciUploadModule } from "src/shared/oci-upload/oci-upload.module";
 import { FlaskModule } from "src/shared/flask/flask.module";
 import { AnalysisController } from "./analysis.controller";
 import { AudioController } from "./audio.controller";
 import { HttpModule } from "@nestjs/axios";
-import { SessionController } from "./session.controller";
-import { SessionService } from "./session.service";
-import { AnswerController } from "./answer.controller";
-import { AnswerService } from "./answer.service";
+import { SessionController } from "./session/session.controller";
+import { SessionService } from "./session/session.service";
+import { AnswerController } from "./answer/answer.controller";
+import { AnswerService } from "./answer/answer.service";
 import { AnalysisService } from "./analysis.service";
 
 import { NewInterviewSession } from "./entities/new.interview.session.entity";

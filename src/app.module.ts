@@ -9,7 +9,7 @@ import { QuestionGeneratorModule } from "./question-generator/question-generator
 import { SttModule } from "./stt/stt.module";
 import { RedisModule } from "./common/redis/redis.module";
 import { InterviewModule } from "./interview/interview.module";
-import { OciUploadModule } from "./oci-upload/oci-upload.module";
+import { OciUploadModule } from "./shared/oci-upload/oci-upload.module";
 import { HttpModule } from "@nestjs/axios";
 import { FlaskModule } from "./shared/flask/flask.module";
 import { OpenaiModule } from "./shared/openai/openai.module";
