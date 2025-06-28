@@ -6,10 +6,10 @@ import {
   PrimaryGeneratedColumn,
 } from "typeorm";
 
-import { NewInterviewSession } from "./new.interview.session.entity";
+import NewInterviewSession from "./new.interview.session.entity";
 import { GeneratedQuestionItem } from "src/question-generator/entities/generated.question.items.entity";
 
-@Entity({ name: "new_interview_answers" })
+@Entity({ name: "interview_answers" })
 export class NewInterviewAnswer {
   @PrimaryGeneratedColumn("uuid")
   id: string;

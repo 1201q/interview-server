@@ -1,7 +1,7 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { QuestionGenerationRequest } from "./question.generation.request";
 
-@Entity({ name: "generated_question_items" })
+@Entity({ name: "question_items" })
 export class GeneratedQuestionItem {
   @PrimaryGeneratedColumn("uuid")
   id: string;

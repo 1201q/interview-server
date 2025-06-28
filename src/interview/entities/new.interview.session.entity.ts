@@ -11,8 +11,8 @@ import {
 import { QuestionGenerationRequest } from "src/question-generator/entities/question.generation.request";
 import { NewInterviewAnswer } from "./new.interview.answer.entity";
 
-@Entity({ name: "new_interview_sessions" })
-export class NewInterviewSession {
+@Entity({ name: "interview_sessions" })
+export default class NewInterviewSession {
   @PrimaryGeneratedColumn("uuid")
   id: string;
 

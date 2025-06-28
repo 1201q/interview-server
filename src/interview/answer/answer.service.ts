@@ -3,7 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 
 import { Repository } from "typeorm";
 
-import { NewInterviewSession } from "../entities/new.interview.session.entity";
+import NewInterviewSession from "../entities/new.interview.session.entity";
 import { NewInterviewAnswer } from "../entities/new.interview.answer.entity";
 
 @Injectable()

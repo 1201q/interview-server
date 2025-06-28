@@ -12,12 +12,14 @@ import { GenerateQuestionFromResumeDto } from "./dtos/generate-question.dto";
 import { QuestionGeneratorService } from "./question-generator.service";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { FlaskService } from "src/shared/flask/flask.service";
+import { LangChainService } from "src/shared/openai/langchain.service";
 
 @Controller("question/generate")
 export class QuestionGeneratorController {
   constructor(
     private readonly generationService: QuestionGeneratorService,
     private readonly flaskService: FlaskService,
+    private readonly langChainService: LangChainService,
   ) {}
 
   @Post("new")
@@ -58,4 +60,8 @@ export class QuestionGeneratorController {
 
     return { result: data.result };
   }
+
+  @Post("upload")
+  @UseInterceptors(FileInterceptor("file"))
+  async upload(@UploadedFile() file: Express.Multer.File) {}
 }

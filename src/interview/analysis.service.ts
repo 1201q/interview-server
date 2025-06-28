@@ -7,7 +7,7 @@ import { ConfigService } from "@nestjs/config";
 import OpenAI from "openai";
 import { QuestionType } from "src/common/interfaces/common.interface";
 import { AnalysisProgress } from "src/common/interfaces/analysis.interface";
-import { NewInterviewSession } from "./entities/new.interview.session.entity";
+import NewInterviewSession from "./entities/new.interview.session.entity";
 import { NewInterviewAnswer } from "./entities/new.interview.answer.entity";
 
 @Injectable()
