@@ -13,6 +13,13 @@ import { QuestionGeneratorService } from "./question-generator.service";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { FlaskService } from "src/shared/flask/flask.service";
 import { LangChainService } from "src/shared/openai/langchain.service";
+import {
+  ApiTags,
+  ApiConsumes,
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+} from "@nestjs/swagger";
 
 @Controller("question/generate")
 export class QuestionGeneratorController {
@@ -43,6 +50,21 @@ export class QuestionGeneratorController {
 
   @Post("extract")
   @UseInterceptors(FileInterceptor("file"))
+  @ApiConsumes("multipart/form-data")
+  @ApiOperation({ summary: "PDF 파일 업로드 및 텍스트 추출" })
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        file: {
+          type: "string",
+          format: "binary",
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: "텍스트 추출 성공" })
+  @ApiResponse({ status: 400, description: "텍스트 부족 또는 파일 오류" })
   async uploadPdf(@UploadedFile() file: Express.Multer.File) {
     const decodedFilename = Buffer.from(file.originalname, "latin1").toString(
       "utf8",

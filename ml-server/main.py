@@ -13,7 +13,11 @@ import pdfplumber
 
 from analysis_main import *
 import io
+import re
 import tempfile, os
+import fitz
+import traceback
+
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
@@ -128,18 +132,24 @@ def extract_text():
     if not file:
         return jsonify({"message": "파일 없음"}), 400
 
-    print(file)
-
     try:
-        text = ""
-        with pdfplumber.open(io.BytesIO(file.read())) as pdf:
-            for page in pdf.pages:
-                page_text = page.extract_text()
-                if page_text:
-                    text += page_text + "\n"
+        raw_data = file.read()
+        pdf = fitz.open(stream=raw_data, filetype="pdf")
 
-        return jsonify({"result": text.strip()})
+        markdown_text = ""
+        for i, page in enumerate(pdf):
+            try:
+                page_text = page.get_text("markdown")
+            except Exception as e:
+                print(f"[WARN] markdown 추출 실패 - fallback to text: {e}")
+                page_text = page.get_text("text")
+            if page_text:
+                markdown_text += page_text + "\n"
+
+        return jsonify({"result": markdown_text.strip()})
     except Exception as e:
+
+        traceback.print_exc()
         return jsonify({"message": str(e)}), 500
 
 

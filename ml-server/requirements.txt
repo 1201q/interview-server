@@ -3,3 +3,4 @@ pdfplumber
 pydub
 ffmpeg-python
 soundfile
+pymupdf

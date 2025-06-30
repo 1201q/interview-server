@@ -99,6 +99,8 @@ jobs:
             echo "OCI_REGION=${{ secrets.OCI_REGION }}" >> .env
             echo "OCI_BUCKET_NAME=${{ secrets.OCI_BUCKET_NAME }}" >> .env
             echo "PY_TEST=${{ secrets.PY_TEST }}" >> .env
+            echo "PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }}" >> .env
+            echo "PINECONE_INDEX_NAME=${{ secrets.PINECONE_INDEX_NAME }}" >> .env
 
             echo "🚀 배포 시작..."
             docker-compose down

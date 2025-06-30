@@ -13,6 +13,7 @@ import { OciUploadModule } from "./shared/oci-upload/oci-upload.module";
 import { HttpModule } from "@nestjs/axios";
 import { FlaskModule } from "./shared/flask/flask.module";
 import { OpenaiModule } from "./shared/openai/openai.module";
+import { PineconeModule } from "./shared/pinecone/pinecone.module";
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { OpenaiModule } from "./shared/openai/openai.module";
     OciUploadModule,
     FlaskModule,
     OpenaiModule,
+    PineconeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

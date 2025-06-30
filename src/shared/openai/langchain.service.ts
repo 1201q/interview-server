@@ -1,16 +1,14 @@
+import { OpenAIEmbeddings } from "@langchain/openai";
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import OpenAI from "openai";
 
 @Injectable()
 export class LangChainService {
-  private openai: OpenAI;
+  private embeddings: OpenAIEmbeddings;
 
   constructor(private readonly configService: ConfigService) {
-    this.openai = new OpenAI({
-      apiKey: this.configService.get("OPENAI_API_KEY"),
+    this.embeddings = new OpenAIEmbeddings({
+      openAIApiKey: this.configService.get("OPENAI_API_KEY"),
     });
   }
-
-  async pdfParse(file: Express.Multer.File) {}
 }
