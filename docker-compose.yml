@@ -49,6 +49,15 @@ services:
     environment:
       - TZ=Asia/Seoul
     platform: linux/arm64
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+    platform: linux/arm64
 
 networks:
   app-network:

@@ -16,6 +16,6 @@ export class AppController {
 
   @Get("test")
   getTest() {
-    return this.appService.getTest();
+    return this.appService.testRedis();
   }
 }
