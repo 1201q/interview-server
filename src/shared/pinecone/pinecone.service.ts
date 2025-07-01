@@ -4,6 +4,7 @@ import { ConfigService } from "@nestjs/config";
 import { Pinecone } from "@pinecone-database/pinecone";
 import { PineconeStore } from "@langchain/pinecone";
 import { Document } from "langchain/document";
+import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 
 @Injectable()
 export class PineconeService implements OnModuleInit {
@@ -27,40 +28,70 @@ export class PineconeService implements OnModuleInit {
     });
   }
 
-  async saveResumeAndJobTexts(
-    resume: string,
-    job: string,
-    userId: string,
-    requestId: string,
-  ) {
-    const texts = [resume, job];
-    const types = ["resume", "job"];
-
-    const docs = texts.map((text, i) => {
-      return new Document({
-        pageContent: text,
-        metadata: {
-          userId,
-          type: types[i],
-          requestId,
-        },
-      });
+  async save(resume: string, job: string, userId: string, requestId: string) {
+    const textSplitter = new RecursiveCharacterTextSplitter({
+      chunkSize: 512,
+      chunkOverlap: 50,
     });
 
-    const store = await PineconeStore.fromExistingIndex(this.embeddings, {
+    const resumeChunks = await textSplitter.createDocuments([resume]);
+    const jobChunks = await textSplitter.createDocuments([job]);
+
+    const resumeDocs: Document[] = [
+      ...resumeChunks.map(
+        (doc, i) =>
+          new Document({
+            pageContent: doc.pageContent,
+            metadata: {
+              type: "resume",
+              userId: `user-${userId}`,
+              requestId,
+              chunkIndex: i,
+            },
+          }),
+      ),
+    ];
+
+    const jobDocs: Document[] = [
+      ...jobChunks.map(
+        (doc, i) =>
+          new Document({
+            pageContent: doc.pageContent,
+            metadata: {
+              type: "job",
+              userId: `user-${userId}`,
+              requestId,
+              chunkIndex: i,
+            },
+          }),
+      ),
+    ];
+
+    await PineconeStore.fromDocuments(resumeDocs, this.embeddings, {
       pineconeIndex: this.index,
+      namespace: "resume",
     });
 
-    await store.addDocuments(docs);
+    await PineconeStore.fromDocuments(jobDocs, this.embeddings, {
+      pineconeIndex: this.index,
+      namespace: "job",
+    });
   }
 
   async similaritySearch(query: string, userId: string, topK = 3) {
     const store = await PineconeStore.fromExistingIndex(this.embeddings, {
       pineconeIndex: this.index,
+      namespace: "resume",
     });
 
     const results = await store.similaritySearch(query, topK);
 
-    return results.filter((r) => r.metadata?.userId === userId);
+    const filtered = results.filter(
+      (r) => r.metadata?.userId === `user-${userId}`,
+    );
+
+    console.log(filtered);
+
+    return filtered;
   }
 }
