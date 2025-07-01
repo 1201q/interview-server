@@ -40,6 +40,8 @@ export class VectorStoreController {
     const results = await this.vectorStoreService.similaritySearch(
       query,
       requestId,
+      2,
+      "resume",
     );
     return results.map((d) => d.pageContent);
   }

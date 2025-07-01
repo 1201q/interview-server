@@ -12,7 +12,7 @@ import { GenerateQuestionFromResumeDto } from "./dtos/generate-question.dto";
 import { QuestionGeneratorService } from "./question-generator.service";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { FlaskService } from "src/shared/flask/flask.service";
-import { LangChainService } from "src/shared/openai/langchain.service";
+
 import {
   ApiTags,
   ApiConsumes,
@@ -26,7 +26,6 @@ export class QuestionGeneratorController {
   constructor(
     private readonly generationService: QuestionGeneratorService,
     private readonly flaskService: FlaskService,
-    private readonly langChainService: LangChainService,
   ) {}
 
   @Post("new")

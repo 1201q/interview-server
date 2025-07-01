@@ -13,7 +13,7 @@ import { OciUploadModule } from "./shared/oci-upload/oci-upload.module";
 import { HttpModule } from "@nestjs/axios";
 import { FlaskModule } from "./shared/flask/flask.module";
 import { OpenaiModule } from "./shared/openai/openai.module";
-import { PineconeModule } from "./shared/pinecone/pinecone.module";
+
 import { VectorStoreModule } from "./shared/vector-store/vector-store.module";
 
 @Module({
@@ -38,7 +38,7 @@ import { VectorStoreModule } from "./shared/vector-store/vector-store.module";
     OciUploadModule,
     FlaskModule,
     OpenaiModule,
-    PineconeModule,
+
     VectorStoreModule,
   ],
   controllers: [AppController],

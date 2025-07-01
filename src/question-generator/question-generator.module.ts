@@ -7,9 +7,7 @@ import { QuestionGenerationRequest } from "./entities/question.generation.reques
 import { QuestionGeneratorController } from "./question-generator.controller";
 import { QuestionGeneratorService } from "./question-generator.service";
 import { GeneratedQuestionItem } from "./entities/generated.question.items.entity";
-import { OpenaiModule } from "src/shared/openai/openai.module";
 import { OpenaiService } from "src/shared/openai/openai.service";
-import { LangChainService } from "src/shared/openai/langchain.service";
 
 @Module({
   imports: [
@@ -20,7 +18,7 @@ import { LangChainService } from "src/shared/openai/langchain.service";
     AuthModule,
     FlaskModule,
   ],
-  providers: [QuestionGeneratorService, OpenaiService, LangChainService],
+  providers: [QuestionGeneratorService, OpenaiService],
   controllers: [QuestionGeneratorController],
 })
 export class QuestionGeneratorModule {}

@@ -5,7 +5,6 @@ import { ConfigService } from "@nestjs/config";
 
 import weaviate, { Filters, WeaviateClient } from "weaviate-client";
 import { WeaviateStore } from "@langchain/weaviate";
-import { v4 as uuidv4 } from "uuid";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 
 @Injectable()
@@ -80,13 +79,18 @@ export class VectorStoreService implements OnModuleInit {
     });
   }
 
-  async similaritySearch(query: string, requestId: string, topK = 2) {
+  async similaritySearch(
+    query: string,
+    requestId: string,
+    topK = 2,
+    namespace: "resume" | "job" = "resume",
+  ) {
     const store = await WeaviateStore.fromExistingIndex(this.embeddings, {
       client: this.client,
-      indexName: "resume",
+      indexName: namespace,
     });
 
-    const collection = this.client.collections.use("interview");
+    const collection = this.client.collections.use(namespace);
 
     return await store.similaritySearch(
       query,
