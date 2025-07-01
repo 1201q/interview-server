@@ -58,15 +58,6 @@ export class LangChainService {
       .pipe(this.llm)
       .pipe(parser);
 
-    // console.log(
-    //   await followUpPrompt.format({
-    //     original_question: input.original_question,
-    //     current_answer: input.current_answer,
-    //     qa_history: input.qa_history,
-    //     retrieved_context: context,
-    //   }),
-    // );
-
     const test = await chain.invoke({});
 
     console.log(test);
