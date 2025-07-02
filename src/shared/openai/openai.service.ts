@@ -19,7 +19,7 @@ export class OpenaiService {
     const prompt_text = QuestionGeneratorPrompt(resume, recruitment);
 
     const response = await this.openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4.1",
       messages: [
         {
           role: "system",
