@@ -34,7 +34,7 @@ export class AnswerController {
     @UploadedFile() audio: Express.Multer.File,
     @Body() body: InterviewSessionWithQuestionIdDto,
   ) {
-    const { session_id, question_id } = body;
+    const { session_id, question_id, answer_text } = body;
     const token = req.cookies.accessToken as string;
     const userId = (await this.authService.decodeAccessToken(token)).id;
 
@@ -51,6 +51,7 @@ export class AnswerController {
       session_id,
       question_id,
       objectName,
+      answer_text,
     );
 
     // const jobRole = await this.analysisService.getJobRole(session_id);

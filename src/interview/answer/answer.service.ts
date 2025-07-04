@@ -43,6 +43,7 @@ export class AnswerService {
     sessionId: string,
     questionId: string,
     audioPath: string,
+    answerText: string,
   ) {
     const currentQuestion = await this.interviewAnswerRepo.findOne({
       where: {
@@ -59,6 +60,7 @@ export class AnswerService {
     currentQuestion.ended_at = new Date();
     currentQuestion.audio_path = audioPath;
     currentQuestion.analysis_status = "processing";
+    currentQuestion.answer_text = answerText;
 
     await this.interviewAnswerRepo.save(currentQuestion);
 

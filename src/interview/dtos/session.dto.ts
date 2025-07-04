@@ -1,5 +1,11 @@
 import { Type } from "class-transformer";
-import { IsNumber, IsOptional, IsUUID, ValidateNested } from "class-validator";
+import {
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  ValidateNested,
+} from "class-validator";
 
 export class InterviewSessionDto {
   @IsUUID()
@@ -21,6 +27,10 @@ export class InterviewSessionWithQuestionIdDto {
 
   @IsUUID()
   question_id: string;
+
+  @IsString()
+  @IsOptional()
+  answer_text?: string;
 }
 
 export class CreateInterviewSessionDto {
