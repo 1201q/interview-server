@@ -6,7 +6,7 @@ export class GeneratedQuestionItem {
   @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column()
+  @Column({ type: "varchar2", length: 500 })
   question: string;
 
   @Column()

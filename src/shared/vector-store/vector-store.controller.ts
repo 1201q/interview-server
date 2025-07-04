@@ -24,7 +24,7 @@ export class VectorStoreController {
     return await this.vectorStoreService.save(
       dto.resume,
       dto.job,
-      "1201q",
+
       "wow",
     );
   }
@@ -44,5 +44,10 @@ export class VectorStoreController {
       "resume",
     );
     return results.map((d) => d.pageContent);
+  }
+
+  @Get("test")
+  async test() {
+    const test = await this.vectorStoreService.deleteByRequestId("wow");
   }
 }

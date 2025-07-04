@@ -33,7 +33,7 @@ export class VectorStoreService implements OnModuleInit {
     });
   }
 
-  async save(resume: string, job: string, userId: string, requestId: string) {
+  async save(resume: string, job: string, requestId: string) {
     const splitter = new RecursiveCharacterTextSplitter({
       chunkSize: 512,
       chunkOverlap: 50,
@@ -48,7 +48,7 @@ export class VectorStoreService implements OnModuleInit {
           pageContent: doc.pageContent,
           metadata: {
             type: "resume",
-            userId: `user-${userId}`,
+
             requestId,
             chunkIndex: i,
           },
@@ -61,22 +61,38 @@ export class VectorStoreService implements OnModuleInit {
           pageContent: doc.pageContent,
           metadata: {
             type: "job",
-            userId: `user-${userId}`,
+
             requestId,
             chunkIndex: i,
           },
         }),
     );
 
-    await WeaviateStore.fromDocuments(resumeDocs, this.embeddings, {
+    const resumeStore = await WeaviateStore.fromExistingIndex(this.embeddings, {
       client: this.client,
       indexName: "resume",
     });
 
-    await WeaviateStore.fromDocuments(jobDocs, this.embeddings, {
+    const jobStore = await WeaviateStore.fromExistingIndex(this.embeddings, {
       client: this.client,
       indexName: "job",
     });
+
+    await resumeStore.addDocuments(resumeDocs);
+    await jobStore.addDocuments(jobDocs);
+  }
+
+  async deleteByRequestId(requestId: string) {
+    const resume = this.client.collections.use("resume");
+    const job = this.client.collections.use("job");
+
+    await resume.data.deleteMany(
+      Filters.and(resume.filter.byProperty("requestId").equal(requestId)),
+    );
+
+    await job.data.deleteMany(
+      Filters.and(job.filter.byProperty("requestId").equal(requestId)),
+    );
   }
 
   async similaritySearch(

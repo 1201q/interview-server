@@ -26,6 +26,9 @@ export class QuestionGenerationRequest {
   })
   items: GeneratedQuestionItem[];
 
+  @Column({ nullable: true })
+  vector_id: string;
+
   @CreateDateColumn({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })
   created_at: Date;
 }
