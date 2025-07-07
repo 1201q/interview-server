@@ -19,11 +19,14 @@ export class NewInterviewAnswer {
   })
   session: NewInterviewSession;
 
-  @ManyToOne(() => GeneratedQuestionItem, { eager: true })
+  @ManyToOne(() => GeneratedQuestionItem, { eager: true, nullable: true })
   question: GeneratedQuestionItem;
 
-  @Column({ type: "int" })
+  @Column({ type: "float" })
   order: number;
+
+  @Column({ default: "main" })
+  type: "main" | "followup";
 
   @Column({ default: "waiting" })
   status: "waiting" | "ready" | "answering" | "submitted";

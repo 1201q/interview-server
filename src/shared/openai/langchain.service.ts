@@ -15,7 +15,7 @@ export class LangChainService {
     private readonly vector: VectorStoreService,
   ) {
     this.llm = new ChatOpenAI({
-      model: "gpt-4o-mini",
+      model: "gpt-4.1-mini",
       temperature: 0.3,
       apiKey: this.config.get("OPENAI_API_KEY"),
     });
@@ -37,7 +37,7 @@ export class LangChainService {
       this.vector.similaritySearch(
         input.current_answer,
         input.requestId,
-        2,
+        1,
         "job",
       ),
     ]);
@@ -57,6 +57,15 @@ export class LangChainService {
       .pipe(followUpPrompt)
       .pipe(this.llm)
       .pipe(parser);
+
+    const filledPrompt = await followUpPrompt.format({
+      original_question: input.original_question,
+      current_answer: input.current_answer,
+      qa_history: input.qa_history,
+      retrieved_context: context,
+    });
+
+    console.log("📌 최종 GPT 프롬프트:\n", filledPrompt);
 
     const test = await chain.invoke({});
 

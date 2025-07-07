@@ -1,10 +1,11 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 
-import { Repository } from "typeorm";
+import { Between, LessThan, MoreThan, Repository } from "typeorm";
 
 import NewInterviewSession from "../entities/new.interview.session.entity";
 import { NewInterviewAnswer } from "../entities/new.interview.answer.entity";
+import { LangChainService } from "src/shared/openai/langchain.service";
 
 @Injectable()
 export class AnswerService {
@@ -14,6 +15,8 @@ export class AnswerService {
 
     @InjectRepository(NewInterviewAnswer)
     private interviewAnswerRepo: Repository<NewInterviewAnswer>,
+
+    private readonly langchainService: LangChainService,
   ) {}
 
   async startAnswer(userId: string, sessionId: string, questionId: string) {
@@ -50,11 +53,12 @@ export class AnswerService {
         session: { id: sessionId, user_id: userId },
         id: questionId,
       },
-      relations: ["session"],
+      relations: ["session", "session.request"],
     });
 
-    if (!currentQuestion)
+    if (!currentQuestion) {
       throw new NotFoundException("질문을 찾을 수 없습니다.");
+    }
 
     currentQuestion.status = "submitted";
     currentQuestion.ended_at = new Date();
@@ -64,12 +68,11 @@ export class AnswerService {
 
     await this.interviewAnswerRepo.save(currentQuestion);
 
-    const nextQuestion = await this.interviewAnswerRepo.findOne({
-      where: {
-        session: { id: sessionId, user_id: userId },
-        order: currentQuestion.order + 1,
-      },
-    });
+    const nextQuestion = await this.getNextQuestion(
+      currentQuestion.order,
+      sessionId,
+      userId,
+    );
 
     if (!nextQuestion) {
       await this.interviewSessionRepo.update(
@@ -98,5 +101,72 @@ export class AnswerService {
         section: nextQuestion.question.section,
       },
     };
+  }
+
+  private async handleFollowup(
+    currentQuestion: NewInterviewAnswer,
+    sessionId: string,
+    userId: string,
+  ) {
+    const prevAnswers = await this.interviewAnswerRepo.find({
+      where: {
+        session: { id: sessionId, user_id: userId },
+        order: LessThan(currentQuestion.order),
+        status: "submitted",
+      },
+      order: { order: "ASC" },
+      relations: ["question"],
+    });
+
+    const history = prevAnswers
+      .map((item) => `Q. ${item.question.question}\nA. ${item.answer_text}`)
+      .join("\n\n");
+
+    const result = await this.langchainService.generateFollowup({
+      original_question: currentQuestion.question.question,
+      current_answer: currentQuestion.answer_text,
+      qa_history: history,
+      requestId: currentQuestion.session.request.vector_id,
+    });
+
+    if (result.result === "SKIP") return null;
+
+    const existingFollowups = await this.interviewAnswerRepo.find({
+      where: {
+        session: { id: sessionId },
+        order: Between(currentQuestion.order, currentQuestion.order + 1),
+      },
+      order: { order: "DESC" },
+    });
+
+    const lastOrder = existingFollowups.find(
+      (q) => q.order > currentQuestion.order,
+    )?.order;
+
+    const nextOrder = lastOrder
+      ? parseFloat((lastOrder + 0.1).toFixed(1))
+      : parseFloat((currentQuestion.order + 0.1).toFixed(1));
+
+    const followupQuestion = this.interviewAnswerRepo.create({
+      session: currentQuestion.session,
+      order: nextOrder,
+      status: "ready",
+    });
+
+    return await this.interviewAnswerRepo.save(followupQuestion);
+  }
+
+  private async getNextQuestion(
+    currentOrder: number,
+    sessionId: string,
+    userId: string,
+  ) {
+    return await this.interviewAnswerRepo.findOne({
+      where: {
+        session: { id: sessionId, user_id: userId },
+        order: MoreThan(currentOrder),
+      },
+      order: { order: "ASC" },
+    });
   }
 }
