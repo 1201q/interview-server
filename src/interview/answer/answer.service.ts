@@ -68,6 +68,29 @@ export class AnswerService {
 
     await this.interviewAnswerRepo.save(currentQuestion);
 
+    const followup = await this.handleFollowup(
+      currentQuestion,
+      sessionId,
+      userId,
+    );
+
+    if (followup) {
+      return {
+        isLastQuestion: false,
+        questionId: currentQuestion.id,
+        questionText:
+          currentQuestion.type === "followup"
+            ? currentQuestion.followup_question_text
+            : currentQuestion.question.question,
+        nextQuestion: {
+          id: followup.id,
+          order: followup.order,
+          text: followup.followup_question_text,
+          section: "basic",
+        },
+      };
+    }
+
     const nextQuestion = await this.getNextQuestion(
       currentQuestion.order,
       sessionId,
@@ -151,7 +174,11 @@ export class AnswerService {
       session: currentQuestion.session,
       order: nextOrder,
       status: "ready",
+      followup_question_text: result.question,
+      type: "followup",
     });
+
+    console.log(followupQuestion);
 
     return await this.interviewAnswerRepo.save(followupQuestion);
   }

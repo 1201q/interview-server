@@ -15,6 +15,7 @@ import { FlaskModule } from "./shared/flask/flask.module";
 import { OpenaiModule } from "./shared/openai/openai.module";
 
 import { VectorStoreModule } from "./shared/vector-store/vector-store.module";
+import { GenerateRequestModule } from "./refactor/generate-request/generate-request.module";
 
 @Module({
   imports: [
@@ -38,7 +39,7 @@ import { VectorStoreModule } from "./shared/vector-store/vector-store.module";
     OciUploadModule,
     FlaskModule,
     OpenaiModule,
-
+    GenerateRequestModule,
     VectorStoreModule,
   ],
   controllers: [AppController],

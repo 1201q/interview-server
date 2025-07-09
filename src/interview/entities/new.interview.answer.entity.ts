@@ -28,6 +28,9 @@ export class NewInterviewAnswer {
   @Column({ default: "main" })
   type: "main" | "followup";
 
+  @Column({ type: "clob", nullable: true })
+  followup_question_text: string;
+
   @Column({ default: "waiting" })
   status: "waiting" | "ready" | "answering" | "submitted";
 

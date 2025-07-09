@@ -20,7 +20,6 @@ import { NewInterviewAnswer } from "./entities/new.interview.answer.entity";
 import { GeneratedQuestionItem } from "src/question-generator/entities/generated.question.items.entity";
 import { QuestionGenerationRequest } from "src/question-generator/entities/question.generation.request";
 
-import { OpenaiModule } from "src/shared/openai/openai.module";
 import { VectorStoreService } from "src/shared/vector-store/vector-store.service";
 import { LangChainService } from "src/shared/openai/langchain.service";
 
