@@ -3,9 +3,7 @@ import { Type } from "class-transformer";
 import {
   ArrayNotEmpty,
   ArrayUnique,
-  IsNotEmpty,
   IsNumber,
-  IsString,
   IsUUID,
   ValidateNested,
 } from "class-validator";

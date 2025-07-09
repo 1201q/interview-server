@@ -8,13 +8,14 @@ import {
   Post,
 } from "@nestjs/common";
 
-import { ApiOperation, ApiResponse, ApiParam } from "@nestjs/swagger";
+import { ApiOperation, ApiResponse, ApiParam, ApiTags } from "@nestjs/swagger";
 import { GenerateRequestService } from "./generate-request.service";
 import {
   CreateQuestionRequestDto,
   GenerateResponseDto,
 } from "./generate-request.dto";
 
+@ApiTags("generate-request")
 @Controller("generate-request")
 export class GenerateRequestController {
   constructor(private readonly generateService: GenerateRequestService) {}

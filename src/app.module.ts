@@ -17,6 +17,7 @@ import { OpenaiModule } from "./shared/openai/openai.module";
 import { VectorStoreModule } from "./shared/vector-store/vector-store.module";
 import { GenerateRequestModule } from "./refactor/generate-request/generate-request.module";
 import { InterviewSessionModule } from "./refactor/interview-session/interview-session.module";
+import { InterviewAnswerModule } from "./refactor/interview-answer/interview-answer.module";
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { InterviewSessionModule } from "./refactor/interview-session/interview-s
     VectorStoreModule,
     GenerateRequestModule,
     InterviewSessionModule,
+    InterviewAnswerModule,
   ],
   controllers: [AppController],
   providers: [AppService],
