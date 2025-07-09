@@ -16,6 +16,7 @@ import { OpenaiModule } from "./shared/openai/openai.module";
 
 import { VectorStoreModule } from "./shared/vector-store/vector-store.module";
 import { GenerateRequestModule } from "./refactor/generate-request/generate-request.module";
+import { InterviewSessionModule } from "./refactor/interview-session/interview-session.module";
 
 @Module({
   imports: [
@@ -39,8 +40,10 @@ import { GenerateRequestModule } from "./refactor/generate-request/generate-requ
     OciUploadModule,
     FlaskModule,
     OpenaiModule,
-    GenerateRequestModule,
+
     VectorStoreModule,
+    GenerateRequestModule,
+    InterviewSessionModule,
   ],
   controllers: [AppController],
   providers: [AppService],
