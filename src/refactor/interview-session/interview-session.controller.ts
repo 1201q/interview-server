@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Get,
@@ -7,18 +6,9 @@ import {
   HttpStatus,
   Param,
   Post,
-  UploadedFile,
-  UseInterceptors,
 } from "@nestjs/common";
 
-import {
-  ApiTags,
-  ApiConsumes,
-  ApiBody,
-  ApiOperation,
-  ApiResponse,
-  ApiParam,
-} from "@nestjs/swagger";
+import { ApiTags, ApiOperation, ApiResponse, ApiParam } from "@nestjs/swagger";
 import { InterviewSessionService } from "./interview-session.service";
 import { GenerateResponseDto } from "../generate-request/generate-request.dto";
 import {

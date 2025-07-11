@@ -9,6 +9,8 @@ import { Answer, Question, SessionQuestion } from "../entities/entities";
 
 import { InterviewSessionModule } from "../interview-session/interview-session.module";
 import { SessionQuestionModule } from "../session-question/session-question.module";
+import { FollowupService } from "../followup/followup.service";
+import { FollwupModule } from "../followup/followup.module";
 
 @Module({
   imports: [
@@ -17,6 +19,7 @@ import { SessionQuestionModule } from "../session-question/session-question.modu
     FlaskModule,
     SessionQuestionModule,
     InterviewSessionModule,
+    FollwupModule,
   ],
   providers: [InterviewAnswerService],
   controllers: [InterviewAnswerController],

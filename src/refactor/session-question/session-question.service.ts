@@ -1,15 +1,15 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
+import { Injectable } from "@nestjs/common";
 
-import { Between, EntityManager, MoreThan, Repository } from "typeorm";
-import { InterviewSession, SessionQuestion } from "../entities/entities";
+import { EntityManager } from "typeorm";
+import {
+  Answer,
+  InterviewSession,
+  SessionQuestion,
+} from "../entities/entities";
 
 @Injectable()
 export class SessionQuestionService {
-  constructor(
-    @InjectRepository(SessionQuestion)
-    private readonly sessionQuestionRepo: Repository<SessionQuestion>,
-  ) {}
+  constructor() {}
 
   /* 
     세션 생성시 session_questions 생성
@@ -33,58 +33,46 @@ export class SessionQuestionService {
     return repo.save(items);
   }
 
-  /* 
-    다음 질문 가져옴
-  */
-  async getNextQuestion(
-    sessionId: string,
-    order: number,
-  ): Promise<SessionQuestion | null> {
-    return this.sessionQuestionRepo.findOne({
-      where: {
-        session: { id: sessionId },
-        order: MoreThan(order),
-      },
-      order: { order: "ASC" },
-    });
-  }
-
-  /* 
-    꼬리 질문 생성
-  */
-  async addFollowup(
-    parentQuestionId: string,
+  // 꼬리질문 DB 삽입 + 빈 answer를 생성.
+  async createFollowUp(
+    manager: EntityManager,
+    parent: SessionQuestion,
     followupText: string,
   ): Promise<SessionQuestion> {
-    const parent = await this.sessionQuestionRepo.findOne({
-      where: { id: parentQuestionId },
-      relations: ["session"],
-    });
+    const questionRepo = manager.getRepository(SessionQuestion);
+    const answerRepo = manager.getRepository(Answer);
 
-    if (!parent)
-      throw new NotFoundException("부모 question이 존재하지 않습니다.");
-
-    const array = await this.sessionQuestionRepo.find({
-      where: {
-        session: { id: parent.session.id },
-        order: Between(parent.order, parent.order + 1),
-      },
-      order: { order: "desc" },
-    });
-
-    const lastOrder = array.find((q) => q.order > parent.order)?.order;
-    const nextOrder = lastOrder
-      ? parseFloat((lastOrder + 0.1).toFixed(1))
-      : parseFloat((parent.order + 0.1).toFixed(1));
-
-    const followup = this.sessionQuestionRepo.create({
+    const newQuestion = questionRepo.create({
       session: parent.session,
-      order: nextOrder,
       type: "followup",
       followup_text: followupText,
       parent,
+      order: parseFloat((parent.order + 0.1).toFixed(1)),
     });
 
-    return this.sessionQuestionRepo.save(followup);
+    await questionRepo.save(newQuestion);
+
+    await answerRepo.save(
+      answerRepo.create({
+        session_question: newQuestion,
+        status: "waiting",
+      }),
+    );
+
+    return newQuestion;
+  }
+
+  async getNext(
+    manager: EntityManager,
+    sessionId: string,
+  ): Promise<SessionQuestion | null> {
+    return manager.getRepository(SessionQuestion).findOne({
+      where: {
+        session: { id: sessionId },
+        answers: { status: "ready" },
+      },
+      relations: ["question", "answers"],
+      order: { order: "ASC" },
+    });
   }
 }
