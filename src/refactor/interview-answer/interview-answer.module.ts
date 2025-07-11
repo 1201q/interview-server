@@ -5,18 +5,20 @@ import { FlaskModule } from "src/shared/flask/flask.module";
 
 import { InterviewAnswerService } from "./interview-answer.service";
 import { InterviewAnswerController } from "./interview-answer.controller";
-import { Answer, Question, SessionQuestion } from "../entities/entities";
+import { Answer } from "../entities/entities";
 
 import { InterviewSessionModule } from "../interview-session/interview-session.module";
 import { SessionQuestionModule } from "../session-question/session-question.module";
-import { FollowupService } from "../followup/followup.service";
+
 import { FollwupModule } from "../followup/followup.module";
+import { OciUploadModule } from "src/shared/oci-upload/oci-upload.module";
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Answer]),
     AuthModule,
     FlaskModule,
+    OciUploadModule,
     SessionQuestionModule,
     InterviewSessionModule,
     FollwupModule,

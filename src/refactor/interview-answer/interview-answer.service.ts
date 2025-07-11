@@ -11,6 +11,8 @@ import { SessionQuestionService } from "../session-question/session-question.ser
 import { InterviewSessionService } from "../interview-session/interview-session.service";
 import { FollowupService } from "../followup/followup.service";
 import { SubmitAnswerResponseDto } from "./interview-answer.dto";
+import { FlaskService } from "src/shared/flask/flask.service";
+import { OciUploadService } from "src/shared/oci-upload/oci-upload.service";
 
 @Injectable()
 export class InterviewAnswerService {
@@ -23,6 +25,9 @@ export class InterviewAnswerService {
     private readonly questionService: SessionQuestionService,
     private readonly sessionService: InterviewSessionService,
     private readonly followupService: FollowupService,
+
+    private readonly flaskService: FlaskService,
+    private readonly ociUploadService: OciUploadService,
   ) {}
 
   async startAnswer(sessionId: string, questionId: string): Promise<void> {
@@ -49,9 +54,16 @@ export class InterviewAnswerService {
   async submitAnswer(
     sessionId: string,
     questionId: string,
-    audioPath: string,
+    audio: Express.Multer.File,
     text: string,
   ): Promise<SubmitAnswerResponseDto> {
+    const seekable = await this.flaskService.convertToSeekableWebm(audio);
+
+    const objectName = await this.ociUploadService.uploadFileFromBuffer(
+      seekable,
+      `seekable-${audio.originalname}`,
+    );
+
     const resultDto =
       await this.dataSource.transaction<SubmitAnswerResponseDto>(
         async (manager) => {
@@ -77,16 +89,18 @@ export class InterviewAnswerService {
           await answerRepo.update(answer.id, {
             status: "submitted",
             text,
-            audio_path: audioPath,
+            audio_path: objectName,
             ended_at: new Date(),
           });
 
+          // followup 판별
           const followupText = await this.followupService.decideFollowupText(
             manager,
             sessionId,
             answer.session_question,
           );
 
+          // followup이라면 새로 생성
           if (followupText) {
             await this.questionService.createFollowUp(
               manager,
@@ -118,6 +132,8 @@ export class InterviewAnswerService {
               finished: false,
             };
           } else {
+            await this.sessionService.finishSession(manager, sessionId);
+
             return {
               next: null,
               finished: true,

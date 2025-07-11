@@ -73,7 +73,7 @@ export class InterviewAnswerController {
     const nextQuestion = await this.answerService.submitAnswer(
       sessionId,
       questionId,
-      "1",
+      file,
       body.answerText,
     );
     return nextQuestion;

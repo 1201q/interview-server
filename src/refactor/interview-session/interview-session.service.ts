@@ -1,12 +1,8 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 
-import { DataSource, Repository } from "typeorm";
-import {
-  Answer,
-  InterviewSession,
-  SessionQuestion,
-} from "../entities/entities";
+import { DataSource, EntityManager, Repository } from "typeorm";
+import { Answer, InterviewSession } from "../entities/entities";
 import {
   CreateInterviewSessionDto,
   InterviewSessionDetailDto,
@@ -130,5 +126,23 @@ export class InterviewSessionService {
     }
 
     return { id: session.id, status: session.status };
+  }
+
+  async finishSession(manager: EntityManager, sessionId: string) {
+    const repo = manager.getRepository(InterviewSession);
+
+    const session = await repo.findOne({
+      where: { id: sessionId },
+    });
+
+    if (!session) {
+      throw new NotFoundException("세션을 찾을 수 없습니다.");
+    }
+
+    if (session.status !== "in_progress") {
+      throw new Error("진행 중인 세션만 종료할 수 있습니다.");
+    }
+
+    await repo.update(sessionId, { status: "completed" });
   }
 }

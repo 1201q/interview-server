@@ -31,6 +31,7 @@ export class CreateInterviewSessionDto {
     description: "request ID",
     type: "string",
     format: "uuid",
+    default: "5571689e-2e6a-4e98-b727-92835552b23f",
   })
   @IsUUID()
   request_id: string;
@@ -38,6 +39,10 @@ export class CreateInterviewSessionDto {
   @ApiProperty({
     description: "메인으로 사용할 질문 목록 (질문ID, 순서)",
     type: [SessionQuestionItemDto],
+    default: [
+      { question_id: "28d1d52a-7efd-4a20-87a3-9372f0fc45f1", order: 0 },
+      { question_id: "3ef93b01-f463-4286-b0bf-9596d74b673e", order: 1 },
+    ],
   })
   @ValidateNested({ each: true })
   @Type(() => SessionQuestionItemDto)
