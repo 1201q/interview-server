@@ -28,6 +28,14 @@ export class CreateInterviewSessionDto {
   user_id: string;
 
   @ApiProperty({
+    description: "request ID",
+    type: "string",
+    format: "uuid",
+  })
+  @IsUUID()
+  request_id: string;
+
+  @ApiProperty({
     description: "메인으로 사용할 질문 목록 (질문ID, 순서)",
     type: [SessionQuestionItemDto],
   })

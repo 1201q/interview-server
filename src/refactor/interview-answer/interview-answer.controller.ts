@@ -21,14 +21,17 @@ import {
   ApiParam,
 } from "@nestjs/swagger";
 import {
+  NextQuestionDto,
   SubmitAnswerDto,
   SubmitAnswerResponseDto,
 } from "./interview-answer.dto";
 
+import { InterviewAnswerService } from "./interview-answer.service";
+
 @ApiTags("interview-answer")
 @Controller("interview-answer/:sessionId")
 export class InterviewAnswerController {
-  constructor() {}
+  constructor(private readonly answerService: InterviewAnswerService) {}
 
   @Post(":questionId/start")
   @ApiOperation({ summary: "질문 응답 시작" })
@@ -43,10 +46,7 @@ export class InterviewAnswerController {
     @Param("sessionId") sessionId: string,
     @Param("questionId") questionId: string,
   ) {
-    // return this.sessionService.createSession(dto);
-
-    console.log(sessionId, questionId);
-    return null;
+    await this.answerService.startAnswer(sessionId, questionId);
   }
 
   @Post(":questionId/submit")
@@ -66,23 +66,16 @@ export class InterviewAnswerController {
     @UploadedFile() file: Express.Multer.File,
     @Body() body: SubmitAnswerDto,
   ): Promise<SubmitAnswerResponseDto> {
-    // return this.sessionService.createSession(dto);
+    if (!file) {
+      throw new BadRequestException("audio 파일이 필요합니다.");
+    }
 
-    console.log(sessionId, questionId);
-    return null;
-  }
-
-  @Get("next")
-  @ApiOperation({ summary: "다음 응답할 질문 조회" })
-  @ApiParam({ name: "sessionId", description: "세션 ID" })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    type: SubmitAnswerResponseDto,
-    description: "다음 질문 정보 또는 세션 완료 여부 반환",
-  })
-  async getNext(
-    @Param("sessionId") sessionId: string,
-  ): Promise<SubmitAnswerResponseDto> {
-    return null;
+    const nextQuestion = await this.answerService.submitAnswer(
+      sessionId,
+      questionId,
+      "1",
+      body.answerText,
+    );
+    return nextQuestion;
   }
 }

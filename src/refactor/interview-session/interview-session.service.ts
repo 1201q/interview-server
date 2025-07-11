@@ -27,11 +27,12 @@ export class InterviewSessionService {
   ) {}
 
   async createSession(dto: CreateInterviewSessionDto) {
-    return await this.dataSource.transaction(async (manager) => {
+    return this.dataSource.transaction(async (manager) => {
       // 1. 세션 생성
       const session = manager.create(InterviewSession, {
         user_id: dto.user_id,
         status: "not_started",
+        request: { id: dto.request_id },
       });
 
       await manager.save(session);
@@ -52,7 +53,7 @@ export class InterviewSessionService {
         }),
       );
 
-      await manager.save(answers);
+      await answerRepo.save(answers);
 
       return { id: session.id, status: session.status };
     });

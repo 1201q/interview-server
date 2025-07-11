@@ -30,7 +30,7 @@ export class SessionQuestionService {
       }),
     );
 
-    return repo.save(items);
+    return await repo.save(items);
   }
 
   // 꼬리질문 DB 삽입 + 빈 answer를 생성.
@@ -69,7 +69,7 @@ export class SessionQuestionService {
     return manager.getRepository(SessionQuestion).findOne({
       where: {
         session: { id: sessionId },
-        answers: { status: "ready" },
+        answers: { status: "waiting" },
       },
       relations: ["question", "answers"],
       order: { order: "ASC" },

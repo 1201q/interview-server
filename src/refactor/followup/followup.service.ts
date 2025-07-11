@@ -36,6 +36,8 @@ export class FollowupService {
       })
       .join("\n\n");
 
+    console.log(parent);
+
     const result = await this.langchain.generateFollowup({
       original_question:
         parent.type === "main" ? parent.question.text : parent.followup_text,
