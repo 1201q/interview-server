@@ -1,14 +1,12 @@
 import { Injectable, OnModuleInit } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-
 import * as common from "oci-common";
 import * as objectStorage from "oci-objectstorage";
-
 import { Readable } from "stream";
 import { v4 as uuid } from "uuid";
 
 @Injectable()
-export class OciUploadService implements OnModuleInit {
+export class OciDBService implements OnModuleInit {
   private client: objectStorage.ObjectStorageClient;
   private namespaceName: string;
   private bucketName: string;
@@ -39,27 +37,6 @@ export class OciUploadService implements OnModuleInit {
     this.uploadManager = new objectStorage.UploadManager(this.client, {
       enforceMD5: true,
     });
-  }
-
-  async uploadFile(file: Express.Multer.File) {
-    const objectName = `${uuid()}-${file.originalname}`;
-
-    const result = await this.uploadManager.upload({
-      content: {
-        stream: Readable.from(file.buffer),
-      },
-      requestDetails: {
-        namespaceName: this.namespaceName,
-        bucketName: this.bucketName,
-        objectName,
-      },
-    });
-
-    if (result.eTag) {
-      return objectName;
-    }
-
-    throw new Error("OCI 업로드 실패");
   }
 
   async uploadFileFromBuffer(buffer: Buffer, name: string) {

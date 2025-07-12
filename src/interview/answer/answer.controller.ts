@@ -54,15 +54,6 @@ export class AnswerController {
       answer_text,
     );
 
-    // const jobRole = await this.analysisService.getJobRole(session_id);
-
-    // await this.flaskService.sendToAnalysisServer(
-    //   audio,
-    //   result.questionId,
-    //   result.questionText,
-    //   jobRole,
-    // );
-
     if (result.isLastQuestion) {
       return { message: `마지막 질문입니다.`, is_last: true };
     }

@@ -2,7 +2,6 @@ import {
   BadRequestException,
   Body,
   Controller,
-  Get,
   HttpCode,
   HttpStatus,
   Param,
@@ -21,14 +20,13 @@ import {
   ApiParam,
 } from "@nestjs/swagger";
 import {
-  NextQuestionDto,
   SubmitAnswerDto,
   SubmitAnswerResponseDto,
 } from "./interview-answer.dto";
 
 import { InterviewAnswerService } from "./interview-answer.service";
 
-@ApiTags("interview-answer")
+@ApiTags("인터뷰 답변")
 @Controller("interview-answer/:sessionId")
 export class InterviewAnswerController {
   constructor(private readonly answerService: InterviewAnswerService) {}

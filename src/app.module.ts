@@ -19,6 +19,7 @@ import { GenerateRequestModule } from "./refactor/generate-request/generate-requ
 import { InterviewSessionModule } from "./refactor/interview-session/interview-session.module";
 import { InterviewAnswerModule } from "./refactor/interview-answer/interview-answer.module";
 import { FollwupModule } from "./refactor/followup/followup.module";
+import { UtilModule } from "./refactor/utils/util.module";
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { FollwupModule } from "./refactor/followup/followup.module";
       synchronize: false,
       logging: false,
     }),
+
     HttpModule,
     AuthModule,
     UserModule,
@@ -42,12 +44,12 @@ import { FollwupModule } from "./refactor/followup/followup.module";
     OciUploadModule,
     FlaskModule,
     OpenaiModule,
-
     VectorStoreModule,
     GenerateRequestModule,
     InterviewSessionModule,
     InterviewAnswerModule,
     FollwupModule,
+    UtilModule,
   ],
   controllers: [AppController],
   providers: [AppService],

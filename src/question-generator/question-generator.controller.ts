@@ -81,8 +81,4 @@ export class QuestionGeneratorController {
 
     return { result: data.result };
   }
-
-  @Post("upload")
-  @UseInterceptors(FileInterceptor("file"))
-  async upload(@UploadedFile() file: Express.Multer.File) {}
 }

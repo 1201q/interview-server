@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsOptional, IsUUID } from "class-validator";
+import { IsUUID } from "class-validator";
 import { IsString } from "class-validator";
 
 export class StartAnswerDto {

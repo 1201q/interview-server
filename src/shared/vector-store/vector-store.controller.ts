@@ -45,9 +45,4 @@ export class VectorStoreController {
     );
     return results.map((d) => d.pageContent);
   }
-
-  @Get("test")
-  async test() {
-    const test = await this.vectorStoreService.deleteByRequestId("wow");
-  }
 }

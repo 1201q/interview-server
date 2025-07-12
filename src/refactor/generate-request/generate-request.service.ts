@@ -27,9 +27,6 @@ export class GenerateRequestService {
 
     @InjectRepository(GenerateRequest)
     private readonly requestRepo: Repository<GenerateRequest>,
-
-    @InjectRepository(Question)
-    private readonly questionRepo: Repository<Question>,
   ) {}
 
   async createQuestionRequest(
