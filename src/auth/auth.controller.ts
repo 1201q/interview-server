@@ -10,11 +10,10 @@ import {
 } from "@nestjs/common";
 import { Request, Response } from "express";
 import { GoogleAuthGuard } from "src/auth/guard/google-auth.guard";
-import { User } from "../common/interfaces/common.interface";
+import { User } from "src/common/interfaces/common.interface";
 import { AuthService } from "./auth.service";
 import { UserService } from "src/user/user.service";
 import { ConfigService } from "@nestjs/config";
-import { JwtAuthGuard } from "./guard/jwt-auh.guard";
 
 @Controller("auth")
 export class AuthController {

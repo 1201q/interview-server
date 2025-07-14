@@ -1,152 +1,148 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 
-import { In, Repository } from "typeorm";
-
-import NewInterviewSession from "../entities/new.interview.session.entity";
-import { NewInterviewAnswer } from "../entities/new.interview.answer.entity";
-import { GeneratedQuestionItem } from "src/question-generator/entities/generated.question.items.entity";
-import { QuestionGenerationRequest } from "src/question-generator/entities/question.generation.request";
+import { DataSource, EntityManager, Repository } from "typeorm";
+import { Answer, InterviewSession } from "../../common/entities/entities";
+import {
+  CreateInterviewSessionDto,
+  InterviewSessionDetailDto,
+} from "./session.dto";
+import { SessionQuestionService } from "../question/question.service";
 
 @Injectable()
-export class SessionService {
+export class InterviewSessionService {
   constructor(
-    @InjectRepository(QuestionGenerationRequest)
-    private questionGenerationReqRepo: Repository<QuestionGenerationRequest>,
+    private readonly dataSource: DataSource,
+    private readonly questionService: SessionQuestionService,
 
-    @InjectRepository(GeneratedQuestionItem)
-    private generatedQuestionItemRepo: Repository<GeneratedQuestionItem>,
+    @InjectRepository(InterviewSession)
+    private readonly sessionRepo: Repository<InterviewSession>,
 
-    @InjectRepository(NewInterviewSession)
-    private interviewSessionRepo: Repository<NewInterviewSession>,
-
-    @InjectRepository(NewInterviewAnswer)
-    private interviewAnswerRepo: Repository<NewInterviewAnswer>,
+    @InjectRepository(Answer)
+    private readonly answerRepo: Repository<Answer>,
   ) {}
 
-  async createInterviewSession(
-    userId: string,
-    requestId: string,
-    questions: { id: string; order: number }[],
-  ) {
-    const questionIds = questions.map((q) => q.id);
-
-    // 임시
-    if (questions.length < 1 || questions.length > 15) {
-      throw new BadRequestException(
-        "질문 개수는 1개 이상 15개 이하여야 합니다.",
-      );
-    }
-
-    const generationRequest = await this.questionGenerationReqRepo.findOneBy({
-      id: requestId,
-    });
-
-    if (!generationRequest) {
-      throw new BadRequestException("이력서 정보를 찾을 수 없습니다.");
-    }
-
-    const findQuestions = await this.generatedQuestionItemRepo.find({
-      where: { id: In(questionIds) },
-    });
-
-    if (questionIds.length !== findQuestions.length) {
-      throw new BadRequestException("일부 질문을 찾을 수 없습니다.");
-    }
-
-    // id, index
-    const questionMap = new Map(questions.map((q) => [q.id, q]));
-
-    const newSession = this.interviewSessionRepo.create({
-      user_id: userId,
-      status: "pending",
-      answers: [],
-      request: generationRequest,
-    });
-
-    const savedSession = await this.interviewSessionRepo.save(newSession);
-
-    const sessionQuestions = questions.map(({ id, order }) => {
-      const question = questionMap.get(id);
-      if (!question) throw new Error(`not found : ${id}`);
-
-      return this.interviewAnswerRepo.create({
-        session: savedSession,
-        question,
-        order,
-        status: "waiting",
+  async createSession(dto: CreateInterviewSessionDto) {
+    return this.dataSource.transaction(async (manager) => {
+      // 1. 세션 생성
+      const session = manager.create(InterviewSession, {
+        user_id: dto.user_id,
+        status: "not_started",
+        request: { id: dto.request_id },
       });
+
+      await manager.save(session);
+
+      // 2. session Question 생성.
+      const sessionQuestions = await this.questionService.bulkCreateQuestions(
+        session,
+        dto.questions,
+        manager,
+      );
+
+      // 3. answer 생성
+      const answerRepo = manager.getRepository(Answer);
+      const answers = sessionQuestions.map((sq) =>
+        answerRepo.create({
+          session_question: sq,
+          status: "waiting",
+        }),
+      );
+
+      await answerRepo.save(answers);
+
+      return { id: session.id, status: session.status };
     });
-
-    const data = await this.interviewAnswerRepo.save(sessionQuestions);
-
-    const result = await this.interviewSessionRepo.findOne({
-      where: { id: savedSession.id },
-      select: ["id"],
-    });
-
-    return result.id;
   }
 
-  // 세션의 상태를 in_progress로 바꿈.
-  // 첫번째 질문의 상태를 ready로 바꿈.
-  async startInterviewSession(userId: string, sessionId: string) {
-    const session = await this.interviewSessionRepo.findOneBy({
-      id: sessionId,
-      user_id: userId,
-    });
-
-    if (!session) throw new NotFoundException("세션이 미존재.");
-
-    session.status = "in_progress";
-    await this.interviewSessionRepo.save(session);
-
-    const firstQuestion = await this.interviewAnswerRepo.findOne({
-      where: {
-        session: { id: sessionId },
-      },
-      order: {
-        order: "ASC",
-      },
-    });
-
-    if (!firstQuestion) {
-      throw new NotFoundException("세션에 해당 질문이 없습니다.");
-    }
-
-    firstQuestion.status = "ready";
-    await this.interviewAnswerRepo.save(firstQuestion);
-
-    const totalCount = await this.interviewAnswerRepo.count({
-      where: { session: { id: sessionId } },
-    });
-
-    return {
-      question: {
-        id: firstQuestion.id,
-        text: firstQuestion.question.question,
-        order: firstQuestion.order,
-        section: firstQuestion.question.section,
-      },
-      totalCount: totalCount,
-    };
-  }
-
-  async completeInterviewSession(userId: string, sessionId: string) {
-    const session = await this.interviewSessionRepo.findOneBy({
-      id: sessionId,
-      user_id: userId,
+  async getSessionDetail(id: string): Promise<InterviewSessionDetailDto> {
+    const session = await this.sessionRepo.findOne({
+      where: { id },
+      relations: [
+        "session_questions",
+        "session_questions.question",
+        "session_questions.answers",
+        "session_questions.answers.analyses",
+      ],
     });
 
     if (!session) {
       throw new NotFoundException("세션을 찾을 수 없습니다.");
     }
 
-    session.status = "completed";
-    return await this.interviewSessionRepo.save(session);
+    return {
+      id: session.id,
+      status: session.status,
+      created_at: session.created_at.toISOString(),
+      questions: session.session_questions.map((sq) => ({
+        id: sq.id,
+        order: sq.order,
+        type: sq.type,
+        text: sq.type === "main" ? sq.question.text : sq.followup_text,
+        status: sq.answers[0]?.status ?? "waiting",
+        answer: sq.answers[0]?.text ?? null,
+      })),
+    };
+  }
+
+  async listSessions(userId: string) {
+    const sessions = await this.sessionRepo.find({
+      where: { user_id: userId },
+      order: { created_at: "DESC" },
+    });
+
+    return sessions.map((s) => ({
+      id: s.id,
+      status: s.status,
+      created_at: s.created_at.toISOString(),
+    }));
+  }
+
+  async startSession(sessionId: string) {
+    const session = await this.sessionRepo.findOne({
+      where: { id: sessionId },
+      relations: ["session_questions", "session_questions.answers"],
+    });
+
+    if (!session) {
+      throw new NotFoundException("세션을 찾을 수 없습니다.");
+    }
+
+    if (session.status !== "not_started") {
+      throw new Error("이미 세션이 시작되었습니다.");
+    }
+
+    session.status = "in_progress";
+    await this.sessionRepo.save(session);
+
+    const firstQuestion = session.session_questions.sort(
+      (a, b) => a.order - b.order,
+    )[0];
+
+    const firstAnswers = firstQuestion.answers[0];
+
+    if (firstAnswers) {
+      await this.answerRepo.update(firstAnswers.id, { status: "ready" });
+    }
+
+    return { id: session.id, status: session.status };
+  }
+
+  async finishSession(manager: EntityManager, sessionId: string) {
+    const repo = manager.getRepository(InterviewSession);
+
+    const session = await repo.findOne({
+      where: { id: sessionId },
+    });
+
+    if (!session) {
+      throw new NotFoundException("세션을 찾을 수 없습니다.");
+    }
+
+    if (session.status !== "in_progress") {
+      throw new Error("진행 중인 세션만 종료할 수 있습니다.");
+    }
+
+    await repo.update(sessionId, { status: "completed" });
   }
 }

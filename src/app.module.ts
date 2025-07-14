@@ -5,21 +5,16 @@ import { ConfigModule } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AuthModule } from "./auth/auth.module";
 import { UserModule } from "./user/user.module";
-import { QuestionGeneratorModule } from "./question-generator/question-generator.module";
-import { SttModule } from "./stt/stt.module";
-import { RedisModule } from "./common/redis/redis.module";
-import { InterviewModule } from "./interview/interview.module";
-import { OciUploadModule } from "./shared/oci-upload/oci-upload.module";
-import { HttpModule } from "@nestjs/axios";
-import { FlaskModule } from "./shared/flask/flask.module";
-import { OpenaiModule } from "./shared/openai/openai.module";
 
-import { VectorStoreModule } from "./shared/vector-store/vector-store.module";
-import { GenerateRequestModule } from "./refactor/generate-request/generate-request.module";
-import { InterviewSessionModule } from "./refactor/interview-session/interview-session.module";
-import { InterviewAnswerModule } from "./refactor/interview-answer/interview-answer.module";
-import { FollwupModule } from "./refactor/followup/followup.module";
-import { UtilModule } from "./refactor/utils/util.module";
+import { HttpModule } from "@nestjs/axios";
+
+import { InterviewSessionModule } from "./interview/session/session.module";
+import { InterviewAnswerModule } from "./interview/answer/answer.module";
+import { FollwupModule } from "./interview/followup/followup.module";
+
+import { TranscribeModule } from "./transcribe/transcribe.module";
+import { ExternalServerModule } from "./external-server/external-server.module";
+import { GenerateQuestionModule } from "./generate-question/generate-question.module";
 
 @Module({
   imports: [
@@ -37,19 +32,13 @@ import { UtilModule } from "./refactor/utils/util.module";
     HttpModule,
     AuthModule,
     UserModule,
-    QuestionGeneratorModule,
-    SttModule,
-    RedisModule,
-    InterviewModule,
-    OciUploadModule,
-    FlaskModule,
-    OpenaiModule,
-    VectorStoreModule,
-    GenerateRequestModule,
+
+    GenerateQuestionModule,
     InterviewSessionModule,
     InterviewAnswerModule,
     FollwupModule,
-    UtilModule,
+    ExternalServerModule,
+    TranscribeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

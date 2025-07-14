@@ -1,199 +1,147 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 
-import { Between, LessThan, MoreThan, Repository } from "typeorm";
-
-import NewInterviewSession from "../entities/new.interview.session.entity";
-import { NewInterviewAnswer } from "../entities/new.interview.answer.entity";
-import { LangChainService } from "src/shared/openai/langchain.service";
+import { DataSource, Repository } from "typeorm";
+import { Answer } from "../../common/entities/entities";
+import { SessionQuestionService } from "../question/question.service";
+import { InterviewSessionService } from "../session/session.service";
+import { FollowupService } from "../followup/followup.service";
+import { SubmitAnswerResponseDto } from "./answer.dto";
+import { FlaskServerService } from "src/external-server/flask-server.service";
+import { OciDBService } from "src/external-server/oci-db.service";
 
 @Injectable()
-export class AnswerService {
+export class InterviewAnswerService {
   constructor(
-    @InjectRepository(NewInterviewSession)
-    private interviewSessionRepo: Repository<NewInterviewSession>,
+    private readonly dataSource: DataSource,
 
-    @InjectRepository(NewInterviewAnswer)
-    private interviewAnswerRepo: Repository<NewInterviewAnswer>,
+    @InjectRepository(Answer)
+    private readonly answerRepo: Repository<Answer>,
 
-    private readonly langchainService: LangChainService,
+    private readonly questionService: SessionQuestionService,
+    private readonly sessionService: InterviewSessionService,
+    private readonly followupService: FollowupService,
+
+    private readonly flaskService: FlaskServerService,
+    private readonly ociUploadService: OciDBService,
   ) {}
 
-  async startAnswer(userId: string, sessionId: string, questionId: string) {
-    const question = await this.interviewAnswerRepo.findOne({
+  async startAnswer(sessionId: string, questionId: string): Promise<void> {
+    const answer = await this.answerRepo.findOne({
       where: {
-        session: { id: sessionId, user_id: userId },
-        id: questionId,
+        session_question: { id: questionId, session: { id: sessionId } },
       },
-      relations: ["session"],
     });
 
-    if (!question) {
-      throw new NotFoundException("질문이 존재하지 않거나 권한이 없습니다.");
+    if (!answer) {
+      throw new NotFoundException("answer를 찾을 수 없음.");
     }
 
-    if (question.status !== "ready") {
-      throw new Error("해당 질문은 아직 시작할 수 없습니다.");
+    if (answer.status !== "ready") {
+      throw new BadRequestException("answer가 ready 상태가 아닙니다.");
     }
 
-    question.status = "answering";
-    question.started_at = new Date();
-    await this.interviewAnswerRepo.save(question);
+    await this.answerRepo.update(answer.id, {
+      status: "answering",
+      started_at: new Date(),
+    });
   }
 
   async submitAnswer(
-    userId: string,
     sessionId: string,
     questionId: string,
-    audioPath: string,
-    answerText: string,
-  ) {
-    const currentQuestion = await this.interviewAnswerRepo.findOne({
-      where: {
-        session: { id: sessionId, user_id: userId },
-        id: questionId,
-      },
-      relations: ["session", "session.request"],
-    });
+    audio: Express.Multer.File,
+    text: string,
+  ): Promise<SubmitAnswerResponseDto> {
+    const seekable = await this.flaskService.convertToSeekableWebm(audio);
 
-    if (!currentQuestion) {
-      throw new NotFoundException("질문을 찾을 수 없습니다.");
-    }
-
-    currentQuestion.status = "submitted";
-    currentQuestion.ended_at = new Date();
-    currentQuestion.audio_path = audioPath;
-    currentQuestion.analysis_status = "processing";
-    currentQuestion.answer_text = answerText;
-
-    await this.interviewAnswerRepo.save(currentQuestion);
-
-    const followup = await this.handleFollowup(
-      currentQuestion,
-      sessionId,
-      userId,
+    const objectName = await this.ociUploadService.uploadFileFromBuffer(
+      seekable,
+      `seekable-${audio.originalname}`,
     );
 
-    if (followup) {
-      return {
-        isLastQuestion: false,
-        questionId: currentQuestion.id,
-        questionText:
-          currentQuestion.type === "followup"
-            ? currentQuestion.followup_question_text
-            : currentQuestion.question.question,
-        nextQuestion: {
-          id: followup.id,
-          order: followup.order,
-          text: followup.followup_question_text,
-          section: "basic",
+    const resultDto =
+      await this.dataSource.transaction<SubmitAnswerResponseDto>(
+        async (manager) => {
+          const answerRepo = manager.getRepository(Answer);
+
+          // 1. 제출할 answer 검색 -> 업데이트
+          const answer = await answerRepo.findOne({
+            where: {
+              session_question: { id: questionId, session: { id: sessionId } },
+            },
+            relations: [
+              "session_question",
+              "session_question.question",
+              "session_question.session.request",
+            ],
+          });
+
+          if (!answer) {
+            throw new NotFoundException("해당 answer가 없습니다.");
+          }
+
+          // 해당 answer 변경 사항 업데이트
+          await answerRepo.update(answer.id, {
+            status: "submitted",
+            text,
+            audio_path: objectName,
+            ended_at: new Date(),
+          });
+
+          // followup 판별
+          const followupText = await this.followupService.decideFollowupText(
+            manager,
+            sessionId,
+            answer.session_question,
+          );
+
+          // followup이라면 새로 생성
+          if (followupText) {
+            await this.questionService.createFollowUp(
+              manager,
+              answer.session_question,
+              followupText,
+            );
+          }
+
+          const nextQuestion = await this.questionService.getNext(
+            manager,
+            sessionId,
+          );
+
+          if (nextQuestion) {
+            await manager
+              .getRepository(Answer)
+              .update(nextQuestion.answers[0].id, { status: "ready" });
+
+            return {
+              next: {
+                questionId: nextQuestion.id,
+                order: nextQuestion.order,
+                text:
+                  nextQuestion.type === "main"
+                    ? nextQuestion.question.text
+                    : nextQuestion.followup_text,
+                type: nextQuestion.type,
+              },
+              finished: false,
+            };
+          } else {
+            await this.sessionService.finishSession(manager, sessionId);
+
+            return {
+              next: null,
+              finished: true,
+            };
+          }
         },
-      };
-    }
-
-    const nextQuestion = await this.getNextQuestion(
-      currentQuestion.order,
-      sessionId,
-      userId,
-    );
-
-    if (!nextQuestion) {
-      await this.interviewSessionRepo.update(
-        { id: sessionId },
-        { status: "completed" },
       );
 
-      return {
-        isLastQuestion: true,
-        questionId: currentQuestion.id,
-        questionText: currentQuestion.question.question,
-      };
-    }
-
-    nextQuestion.status = "ready";
-    await this.interviewAnswerRepo.save(nextQuestion);
-
-    return {
-      isLastQuestion: false,
-      questionId: currentQuestion.id,
-      questionText: currentQuestion.question.question,
-      nextQuestion: {
-        id: nextQuestion.id,
-        order: nextQuestion.order,
-        text: nextQuestion.question.question,
-        section: nextQuestion.question.section,
-      },
-    };
-  }
-
-  private async handleFollowup(
-    currentQuestion: NewInterviewAnswer,
-    sessionId: string,
-    userId: string,
-  ) {
-    const prevAnswers = await this.interviewAnswerRepo.find({
-      where: {
-        session: { id: sessionId, user_id: userId },
-        order: LessThan(currentQuestion.order),
-        status: "submitted",
-      },
-      order: { order: "ASC" },
-      relations: ["question"],
-    });
-
-    const history = prevAnswers
-      .map((item) => `Q. ${item.question.question}\nA. ${item.answer_text}`)
-      .join("\n\n");
-
-    const result = await this.langchainService.generateFollowup({
-      original_question: currentQuestion.question.question,
-      current_answer: currentQuestion.answer_text,
-      qa_history: history,
-      requestId: currentQuestion.session.request.vector_id,
-    });
-
-    if (result.result === "SKIP") return null;
-
-    const existingFollowups = await this.interviewAnswerRepo.find({
-      where: {
-        session: { id: sessionId },
-        order: Between(currentQuestion.order, currentQuestion.order + 1),
-      },
-      order: { order: "DESC" },
-    });
-
-    const lastOrder = existingFollowups.find(
-      (q) => q.order > currentQuestion.order,
-    )?.order;
-
-    const nextOrder = lastOrder
-      ? parseFloat((lastOrder + 0.1).toFixed(1))
-      : parseFloat((currentQuestion.order + 0.1).toFixed(1));
-
-    const followupQuestion = this.interviewAnswerRepo.create({
-      session: currentQuestion.session,
-      order: nextOrder,
-      status: "ready",
-      followup_question_text: result.question,
-      type: "followup",
-    });
-
-    console.log(followupQuestion);
-
-    return await this.interviewAnswerRepo.save(followupQuestion);
-  }
-
-  private async getNextQuestion(
-    currentOrder: number,
-    sessionId: string,
-    userId: string,
-  ) {
-    return await this.interviewAnswerRepo.findOne({
-      where: {
-        session: { id: sessionId, user_id: userId },
-        order: MoreThan(currentOrder),
-      },
-      order: { order: "ASC" },
-    });
+    return resultDto;
   }
 }

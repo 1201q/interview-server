@@ -1,88 +1,76 @@
 import {
+  BadRequestException,
   Body,
   Controller,
-  Patch,
-  Req,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
   UploadedFile,
   UseInterceptors,
 } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express/multer";
 
-import { OciUploadService } from "src/shared/oci-upload/oci-upload.service";
+import {
+  ApiTags,
+  ApiConsumes,
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+} from "@nestjs/swagger";
+import { SubmitAnswerDto, SubmitAnswerResponseDto } from "./answer.dto";
 
-import { Request } from "express";
-import { InterviewSessionWithQuestionIdDto } from "../dtos/session.dto";
-import { AuthService } from "src/auth/auth.service";
+import { InterviewAnswerService } from "./answer.service";
 
-import { FileInterceptor } from "@nestjs/platform-express";
-import { FlaskService } from "src/shared/flask/flask.service";
-import { AnswerService } from "./answer.service";
-import { AnalysisService } from "../analysis.service";
+@ApiTags("인터뷰 답변")
+@Controller("interview-answer/:sessionId")
+export class InterviewAnswerController {
+  constructor(private readonly answerService: InterviewAnswerService) {}
 
-@Controller("answer")
-export class AnswerController {
-  constructor(
-    private readonly ociUploadService: OciUploadService,
-    private readonly authService: AuthService,
-    private readonly flaskService: FlaskService,
-    private readonly answerService: AnswerService,
-  ) {}
-
-  @Patch("submit")
-  @UseInterceptors(FileInterceptor("audio"))
-  async submitAnswer(
-    @Req() req: Request,
-    @UploadedFile() audio: Express.Multer.File,
-    @Body() body: InterviewSessionWithQuestionIdDto,
+  @Post(":questionId/start")
+  @ApiOperation({ summary: "질문 응답 시작" })
+  @ApiParam({ name: "sessionId", description: "세션 ID" })
+  @ApiParam({ name: "questionId", description: "세션 질문 ID" })
+  @ApiResponse({
+    status: HttpStatus.NO_CONTENT,
+    description: "응답이 시작되었습니다.",
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async start(
+    @Param("sessionId") sessionId: string,
+    @Param("questionId") questionId: string,
   ) {
-    const { session_id, question_id, answer_text } = body;
-    const token = req.cookies.accessToken as string;
-    const userId = (await this.authService.decodeAccessToken(token)).id;
-
-    const convertedBuffer =
-      await this.flaskService.convertToSeekableWebm(audio);
-
-    const objectName = await this.ociUploadService.uploadFileFromBuffer(
-      convertedBuffer,
-      `seekable-${audio.originalname}`,
-    );
-
-    const result = await this.answerService.submitAnswer(
-      userId,
-      session_id,
-      question_id,
-      objectName,
-      answer_text,
-    );
-
-    if (result.isLastQuestion) {
-      return { message: `마지막 질문입니다.`, is_last: true };
-    }
-
-    return {
-      message: `계속 진행합니다. 다음 질문은 ${result.nextQuestion.id}`,
-      is_last: false,
-      question: {
-        question_id: result.nextQuestion.id,
-        question_text: result.nextQuestion.text,
-        section: result.nextQuestion.section,
-      },
-      current_order: result.nextQuestion.order,
-    };
+    await this.answerService.startAnswer(sessionId, questionId);
   }
 
-  @Patch("start")
-  async startAnswer(
-    @Req() req: Request,
-    @Body() body: InterviewSessionWithQuestionIdDto,
-  ) {
-    const { session_id, question_id } = body;
-    const token = req.cookies.accessToken as string;
-    const userId = (await this.authService.decodeAccessToken(token)).id;
+  @Post(":questionId/submit")
+  @ApiOperation({ summary: "응답 제출 및 다음 질문 준비" })
+  @ApiParam({ name: "sessionId", description: "세션 ID" })
+  @ApiParam({ name: "questionId", description: "세션 질문 ID" })
+  @ApiConsumes("multipart/form-data")
+  @UseInterceptors(FileInterceptor("audio"))
+  @ApiBody({ type: SubmitAnswerDto })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    type: SubmitAnswerResponseDto,
+  })
+  async submit(
+    @Param("sessionId") sessionId: string,
+    @Param("questionId") questionId: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: SubmitAnswerDto,
+  ): Promise<SubmitAnswerResponseDto> {
+    if (!file) {
+      throw new BadRequestException("audio 파일이 필요합니다.");
+    }
 
-    await this.answerService.startAnswer(userId, session_id, question_id);
-
-    return {
-      message: `${question_id} 질문을 시작합니다.`,
-    };
+    const nextQuestion = await this.answerService.submitAnswer(
+      sessionId,
+      questionId,
+      file,
+      body.answerText,
+    );
+    return nextQuestion;
   }
 }
