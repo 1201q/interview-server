@@ -19,6 +19,7 @@ import { ConfigService } from "@nestjs/config";
 import { QuestionGeneratorPrompt } from "src/common/prompts/question-generator.prompt";
 import { Response } from "express";
 import { generatedQuestionFormat } from "src/common/schemas/prompt.schema";
+import { MOCK_QUESTIONS } from "src/common/constants/mock-question";
 
 @Injectable()
 export class GenerateQuestionService {
@@ -223,6 +224,16 @@ export class GenerateQuestionService {
 
     console.log(result.output_parsed.questions.length);
     console.log(result.output_parsed);
+  }
+
+  async streamMockData(res: Response) {
+    for (const q of MOCK_QUESTIONS) {
+      res.write(`event: question\ndata: ${JSON.stringify(q)}\n\n`);
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+
+    res.write("event: done\ndata: [DONE]\n\n");
+    return res.end();
   }
 
   // new

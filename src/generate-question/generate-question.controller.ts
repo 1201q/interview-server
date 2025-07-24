@@ -66,16 +66,24 @@ export class GenerateQuestionController {
     return this.generateService.createRequest(createDto);
   }
 
-  @Get("test")
-  async test(@Query("id") id: string, @Res() res: Response) {
+  @Get("test/:id")
+  async test(
+    @Param("id") id: string,
+    @Query("mock") mock: string,
+    @Res() res: Response,
+  ) {
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
     res.flushHeaders();
 
-    console.log(id, res);
+    const isMock = mock === "true";
 
-    await this.generateService.streamQuestionGenerator(id, res);
+    if (isMock) {
+      await this.generateService.streamMockData(res);
+    } else {
+      await this.generateService.streamQuestionGenerator(id, res);
+    }
   }
 
   @Get(":id")
