@@ -5,10 +5,12 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Res,
   Param,
   Post,
   UploadedFile,
   UseInterceptors,
+  Query,
 } from "@nestjs/common";
 
 import {
@@ -26,9 +28,10 @@ import {
 } from "./generate-question.dto";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { FlaskServerService } from "../external-server/flask-server.service";
+import { Response } from "express";
 
 @ApiTags("이력서 생성")
-@Controller("generate-request")
+@Controller("generate-question")
 export class GenerateQuestionController {
   constructor(
     private readonly generateService: GenerateQuestionService,
@@ -47,6 +50,32 @@ export class GenerateQuestionController {
     @Body() createDto: CreateQuestionRequestDto,
   ): Promise<GenerateResponseDto> {
     return this.generateService.createQuestionRequest(createDto);
+  }
+
+  @Post("new")
+  @ApiOperation({ summary: "이력서 및 채용공고 기반 질문 요청 생성" })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: "새로운 질문 생성 요청",
+    type: GenerateResponseDto,
+  })
+  @HttpCode(HttpStatus.CREATED)
+  async createRequest2(
+    @Body() createDto: CreateQuestionRequestDto,
+  ): Promise<GenerateResponseDto> {
+    return this.generateService.createRequest(createDto);
+  }
+
+  @Get("test")
+  async test(@Query("id") id: string, @Res() res: Response) {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders();
+
+    console.log(id, res);
+
+    await this.generateService.streamQuestionGenerator(id, res);
   }
 
   @Get(":id")

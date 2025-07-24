@@ -32,7 +32,6 @@ import { GenerateQuestionModule } from "./generate-question/generate-question.mo
     HttpModule,
     AuthModule,
     UserModule,
-
     GenerateQuestionModule,
     InterviewSessionModule,
     InterviewAnswerModule,

@@ -58,7 +58,8 @@
     "typeorm": "^0.3.21",
     "uuid": "^11.1.0",
     "weaviate-client": "^3.6.2",
-    "ws": "^8.18.1"
+    "ws": "^8.18.1",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",

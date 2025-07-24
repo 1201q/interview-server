@@ -17,6 +17,8 @@ import {
 import OpenAI from "openai";
 import { ConfigService } from "@nestjs/config";
 import { QuestionGeneratorPrompt } from "src/common/prompts/question-generator.prompt";
+import { Response } from "express";
+import { generatedQuestionFormat } from "src/common/schemas/prompt.schema";
 
 @Injectable()
 export class GenerateQuestionService {
@@ -125,8 +127,8 @@ export class GenerateQuestionService {
     return { questions: result };
   }
 
-  async questionGenerator(resume: string, recruitment: string) {
-    const prompt_text = QuestionGeneratorPrompt(resume, recruitment);
+  async questionGenerator(resume: string, job: string) {
+    const prompt_text = QuestionGeneratorPrompt(resume, job);
 
     const response = await this.openai.chat.completions.create({
       model: "gpt-4.1",
@@ -151,5 +153,104 @@ export class GenerateQuestionService {
       console.log(error);
       throw new Error();
     }
+  }
+
+  async streamQuestionGenerator(requestId: string, res: Response) {
+    const request = await this.requestRepo.findOneOrFail({
+      where: { id: requestId },
+    });
+
+    const prompt_text = QuestionGeneratorPrompt(
+      request.resume_text,
+      request.job_text,
+    );
+
+    const stream = this.openai.responses
+      .stream({
+        model: "gpt-4.1",
+        input: [
+          {
+            role: "system",
+            content:
+              "당신은 어떤 직군이든 면접 질문을 만들어낼 수 있는 전문 면접관입니다.",
+          },
+          { role: "user", content: prompt_text },
+        ],
+        text: {
+          format: generatedQuestionFormat,
+        },
+        temperature: 0.7,
+      })
+      .on("response.output_text.delta", (e) => {
+        console.log(e.delta);
+        res.write(`data: ${e.delta}\n\n`);
+      })
+      .on("response.output_text.done", () => {
+        res.write("data: [DONE]\n\n");
+        res.end();
+      })
+      .on("error", (event) => {
+        console.log(event);
+      });
+    const result = await stream.finalResponse();
+
+    console.log(result);
+    console.log(result.output_parsed.questions.length);
+    console.log(result.output_parsed);
+  }
+
+  // new
+  async createRequest(
+    dto: CreateQuestionRequestDto,
+  ): Promise<GenerateResponseDto> {
+    const resultDto: GenerateResponseDto = { id: null, status: "failed" };
+
+    await this.dataSource.transaction(async (manager) => {
+      const request = manager.create(GenerateRequest, {
+        resume_text: dto.resume_text,
+        job_text: dto.job_text,
+        status: "pending",
+      });
+
+      await manager.save(request);
+
+      resultDto.id = request.id;
+
+      try {
+        this.logger.log(`vector store에 업로드 중... ${request.id}`);
+
+        await this.vectorStoreService.save(
+          dto.resume_text,
+          dto.job_text,
+          request.id,
+        );
+
+        request.vector_id = request.id;
+        await manager.save(request);
+        resultDto.status = "completed";
+      } catch (error) {
+        this.logger.error(`fail: ${request.id}`, error.stack);
+
+        request.status = "failed";
+
+        await manager.save(request);
+        await this.vectorStoreService
+          .deleteByRequestId(request.id)
+          .catch((e) => {
+            this.logger.warn(`fail: vector 삭제 실패 ${request.id}`, e.stack);
+          });
+
+        throw new InternalServerErrorException("Request 생성 중 오류 발생.");
+      }
+    });
+
+    return resultDto;
+  }
+
+  async streamQuestionGeneratorAndSave(requestId: string) {
+    const request = await this.requestRepo.findOneOrFail({
+      where: { id: requestId },
+    });
+    console.log(request);
   }
 }
