@@ -165,36 +165,62 @@ export class GenerateQuestionService {
       request.job_text,
     );
 
-    const stream = this.openai.responses
-      .stream({
-        model: "gpt-4.1",
-        input: [
-          {
-            role: "system",
-            content:
-              "당신은 어떤 직군이든 면접 질문을 만들어낼 수 있는 전문 면접관입니다.",
-          },
-          { role: "user", content: prompt_text },
-        ],
-        text: {
-          format: generatedQuestionFormat,
+    const stream = this.openai.responses.stream({
+      model: "gpt-4.1",
+      input: [
+        {
+          role: "system",
+          content:
+            "당신은 어떤 직군이든 면접 질문을 만들어낼 수 있는 전문 면접관입니다.",
         },
-        temperature: 0.7,
-      })
-      .on("response.output_text.delta", (e) => {
-        console.log(e.delta);
-        res.write(`data: ${e.delta}\n\n`);
-      })
-      .on("response.output_text.done", () => {
-        res.write("data: [DONE]\n\n");
-        res.end();
-      })
-      .on("error", (event) => {
-        console.log(event);
-      });
+        { role: "user", content: prompt_text },
+      ],
+
+      text: {
+        format: generatedQuestionFormat,
+      },
+
+      temperature: 0.7,
+    });
+
+    let buffer = "";
+
+    stream.on("response.output_text.delta", (e) => {
+      buffer += e.delta;
+
+      if (e.delta.includes("}")) {
+        if (buffer.includes("questions") && buffer.includes("[")) {
+          buffer = buffer.substring(buffer.indexOf("[") + 1);
+        }
+
+        try {
+          const parsed = JSON.parse(
+            buffer.substring(buffer.indexOf("{"), buffer.indexOf("}") + 1),
+          );
+          console.log("@@@@@@@@@@@@@@@@@@@@@@@");
+          console.log(parsed);
+          console.log("@@@@@@@@@@@@@@@@@@@@@@@");
+          res.write(`data: ${JSON.stringify(parsed)}\n\n`);
+        } catch (error) {
+          console.log(error);
+        }
+
+        buffer = "";
+      }
+    });
+
+    stream.on("response.output_text.done", () => {
+      res.write("data: [DONE]\n\n");
+      res.end();
+    });
+
+    stream.on("error", (event) => {
+      console.log(event);
+      res.end();
+    });
+
     const result = await stream.finalResponse();
 
-    console.log(result);
     console.log(result.output_parsed.questions.length);
     console.log(result.output_parsed);
   }
