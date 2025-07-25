@@ -201,7 +201,7 @@ export class GenerateQuestionService {
           console.log("@@@@@@@@@@@@@@@@@@@@@@@");
           console.log(parsed);
           console.log("@@@@@@@@@@@@@@@@@@@@@@@");
-          res.write(`data: ${JSON.stringify(parsed)}\n\n`);
+          res.write(`event: question\ndata: ${JSON.stringify(parsed)}\n\n`);
         } catch (error) {
           console.log(error);
         }
