@@ -79,6 +79,8 @@ export class GenerateQuestionController {
 
     const isMock = mock === "true";
 
+    // test
+
     if (isMock) {
       await this.generateService.streamMockData(res);
     } else {
