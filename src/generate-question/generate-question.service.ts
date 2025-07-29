@@ -229,7 +229,7 @@ export class GenerateQuestionService {
   async streamMockData(res: Response) {
     for (const q of MOCK_QUESTIONS) {
       res.write(`event: question\ndata: ${JSON.stringify(q)}\n\n`);
-      await new Promise((r) => setTimeout(r, 1000));
+      await new Promise((r) => setTimeout(r, 500));
     }
 
     res.write("event: done\ndata: [DONE]\n\n");
