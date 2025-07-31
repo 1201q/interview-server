@@ -1,4 +1,5 @@
 import {
+  HttpStatus,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -121,6 +122,10 @@ export class GenerateQuestionService {
       throw new NotFoundException("해당 id의 생성 요청이 없습니다.");
     }
 
+    if (request.status !== "completed" || request.questions.length === 0) {
+      throw new NotFoundException("질문이 생성되지 않았습니다.");
+    }
+
     const result = request.questions.map((q) => ({
       id: q.id,
       text: q.text,
@@ -128,7 +133,7 @@ export class GenerateQuestionService {
       section: q.section,
     }));
 
-    return { questions: result };
+    return { status: "ok", questions: result };
   }
 
   async questionGenerator(resume: string, job: string) {
@@ -223,7 +228,7 @@ export class GenerateQuestionService {
         const questions = result.output_parsed.questions.map((q) =>
           this.questionRepo.create({
             request: requestEntity,
-            text: q.question,
+            text: q.text,
             based_on: q.based_on,
             section: q.section,
           }),
