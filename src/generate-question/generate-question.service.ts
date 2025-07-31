@@ -34,6 +34,9 @@ export class GenerateQuestionService {
 
     @InjectRepository(GenerateRequest)
     private readonly requestRepo: Repository<GenerateRequest>,
+
+    @InjectRepository(Question)
+    private readonly questionRepo: Repository<Question>,
   ) {
     this.openai = new OpenAI({
       apiKey: this.configService.get("OPENAI_API_KEY"),
@@ -157,13 +160,16 @@ export class GenerateQuestionService {
   }
 
   async streamQuestionGenerator(requestId: string, res: Response) {
-    const request = await this.requestRepo.findOneOrFail({
+    const requestEntity = await this.requestRepo.findOneOrFail({
       where: { id: requestId },
     });
 
+    requestEntity.status = "working";
+    await this.requestRepo.save(requestEntity);
+
     const prompt_text = QuestionGeneratorPrompt(
-      request.resume_text,
-      request.job_text,
+      requestEntity.resume_text,
+      requestEntity.job_text,
     );
 
     const stream = this.openai.responses.stream({
@@ -210,20 +216,47 @@ export class GenerateQuestionService {
       }
     });
 
-    stream.on("response.output_text.done", () => {
-      res.write("data: [DONE]\n\n");
-      res.end();
+    stream.on("response.output_text.done", async () => {
+      try {
+        const result = await stream.finalResponse();
+
+        const questions = result.output_parsed.questions.map((q) =>
+          this.questionRepo.create({
+            request: requestEntity,
+            text: q.question,
+            based_on: q.based_on,
+            section: q.section,
+          }),
+        );
+
+        await this.questionRepo.save(questions);
+
+        requestEntity.status = "completed";
+        await this.requestRepo.save(requestEntity);
+
+        console.log(requestEntity);
+
+        res.write("event: done\ndata: [DONE]\n\n");
+      } catch (error) {
+        console.error("DB error:", error);
+        requestEntity.status = "failed";
+
+        await this.requestRepo.save(requestEntity);
+      } finally {
+        res.end();
+      }
     });
 
-    stream.on("error", (event) => {
-      console.log(event);
-      res.end();
+    stream.on("error", async (event) => {
+      console.error("OPENAI stream error: ", event);
+
+      requestEntity.status = "failed";
+      await this.requestRepo.save(requestEntity);
+
+      if (!res.writableEnded) {
+        res.end();
+      }
     });
-
-    const result = await stream.finalResponse();
-
-    console.log(result.output_parsed.questions.length);
-    console.log(result.output_parsed);
   }
 
   async streamMockData(res: Response) {

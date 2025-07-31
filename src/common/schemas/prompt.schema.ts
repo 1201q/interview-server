@@ -8,7 +8,7 @@ const QuestionItem = z.object({
 });
 
 const QuestionSchema = z.object({
-  questions: z.array(QuestionItem).length(20),
+  questions: z.array(QuestionItem).length(10),
 });
 
 export const generatedQuestionFormat = zodTextFormat(
