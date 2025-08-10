@@ -22,6 +22,7 @@ export class TranscribeController {
     const session = await this.transcribeService.createRealtimeSession();
 
     console.log(session);
+
     return session;
   }
 }
