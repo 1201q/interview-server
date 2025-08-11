@@ -12,7 +12,7 @@ export type QuestionSection =
   | "expertise";
 
 export interface QuestionItem {
-  question: string;
+  text: string;
   based_on: string;
   section: QuestionSection;
 }
