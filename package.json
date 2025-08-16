@@ -17,7 +17,9 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "aicommit": "powershell -Command \"$OutputEncoding = [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false); node genmsg.js | git -c i18n.commitEncoding=utf-8 commit -F -\"",
+    "aicommit:amend": "powershell -Command \"$OutputEncoding = [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false); node genmsg.js | git -c i18n.commitEncoding=utf-8 commit --amend -F -\""
   },
   "dependencies": {
     "@google-cloud/speech": "^7.0.0",
@@ -46,7 +48,7 @@
     "multer": "^1.4.5-lts.2",
     "oci-common": "^2.109.0",
     "oci-objectstorage": "^2.109.0",
-    "openai": "^4.96.0",
+    "openai": "^4.104.0",
     "oracledb": "^6.8.0",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
@@ -74,6 +76,7 @@
     "@types/supertest": "^6.0.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
+    "dotenv": "^17.2.1",
     "eslint": "^8.0.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-prettier": "^5.0.0",

@@ -187,11 +187,9 @@ export class GenerateQuestionService {
         },
         { role: "user", content: prompt_text },
       ],
-
       text: {
         format: generatedQuestionFormat,
       },
-
       temperature: 0.7,
     });
 
@@ -259,6 +257,7 @@ export class GenerateQuestionService {
       await this.requestRepo.save(requestEntity);
 
       if (!res.writableEnded) {
+        res.write("event: failed\ndata: [DONE]\n\n");
         res.end();
       }
     });
