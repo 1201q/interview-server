@@ -12,6 +12,7 @@ export class TranscribeController {
     private readonly transcribeService: TranscribeService,
   ) {}
 
+  //
   @Post("/realtime/token")
   @ApiCookieAuth("accessToken")
   @ApiOperation({ summary: "gpt-4o-transcribe 토큰 발급" })
