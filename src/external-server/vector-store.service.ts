@@ -1,11 +1,11 @@
 import { OpenAIEmbeddings } from "@langchain/openai";
 import { Injectable, OnModuleInit } from "@nestjs/common";
-import { Document } from "langchain/document";
+import { Document } from "@langchain/core/documents";
 import { ConfigService } from "@nestjs/config";
 
 import weaviate, { Filters, WeaviateClient } from "weaviate-client";
 import { WeaviateStore } from "@langchain/weaviate";
-import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
+import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 
 @Injectable()
 export class VectorStoreService implements OnModuleInit {
