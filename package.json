@@ -23,7 +23,6 @@
   },
   "dependencies": {
     "@google-cloud/speech": "^7.0.0",
-    "@langchain/community": "^0.3.47",
     "@langchain/core": "^0.3.61",
     "@langchain/openai": "^0.5.16",
     "@langchain/weaviate": "^0.2.0",
