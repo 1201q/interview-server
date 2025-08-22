@@ -2,16 +2,34 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 
 import { DataSource, EntityManager, Repository } from "typeorm";
-import { Answer, InterviewSession } from "../../common/entities/entities";
+import {
+  Answer,
+  InterviewSession,
+  Question,
+} from "../../common/entities/entities";
 import {
   CreateInterviewSessionDto,
+  InterviewJobRoleDto,
   InterviewSessionDetailDto,
+  KeywordsForSttDto,
 } from "./session.dto";
 import { SessionQuestionService } from "../question/question.service";
+import { InterviewRolePrompt } from "src/common/prompts/interview-role.prompt";
+import OpenAI from "openai";
+import { ConfigService } from "@nestjs/config";
+import {
+  KeywordsForSttDtoSchema,
+  sttKeywordFormat,
+} from "src/common/schemas/prompt.schema";
+import { SttKeywordPrompt } from "src/common/prompts/stt-keyword.prompt";
+import e from "express";
 
 @Injectable()
 export class InterviewSessionService {
+  private openai: OpenAI;
+
   constructor(
+    private readonly config: ConfigService,
     private readonly dataSource: DataSource,
     private readonly questionService: SessionQuestionService,
 
@@ -20,7 +38,11 @@ export class InterviewSessionService {
 
     @InjectRepository(Answer)
     private readonly answerRepo: Repository<Answer>,
-  ) {}
+  ) {
+    this.openai = new OpenAI({
+      apiKey: this.config.get("OPENAI_API_KEY"),
+    });
+  }
 
   async createSession(dto: CreateInterviewSessionDto) {
     return this.dataSource.transaction(async (manager) => {
@@ -85,19 +107,6 @@ export class InterviewSessionService {
     };
   }
 
-  async listSessions(userId: string) {
-    const sessions = await this.sessionRepo.find({
-      where: { user_id: userId },
-      order: { created_at: "DESC" },
-    });
-
-    return sessions.map((s) => ({
-      id: s.id,
-      status: s.status,
-      created_at: s.created_at.toISOString(),
-    }));
-  }
-
   async startSession(sessionId: string) {
     const session = await this.sessionRepo.findOne({
       where: { id: sessionId },
@@ -144,5 +153,132 @@ export class InterviewSessionService {
     }
 
     await repo.update(sessionId, { status: "completed" });
+  }
+
+  async getJobRoleFromSessionId(
+    sessionId: string,
+  ): Promise<InterviewJobRoleDto> {
+    const session = await this.sessionRepo.findOne({
+      where: { id: sessionId },
+      relations: ["request"],
+    });
+
+    if (!session) {
+      throw new NotFoundException("세션을 찾을 수 없습니다.");
+    }
+
+    return await this.inferRoleFromJobText(session.request.job_text);
+  }
+
+  async getJobRoleFromJobText(jobText: string): Promise<InterviewJobRoleDto> {
+    return await this.inferRoleFromJobText(jobText);
+  }
+
+  async getKeywordsForStt(sessionId: string): Promise<KeywordsForSttDto> {
+    const session = await this.sessionRepo.findOne({
+      where: { id: sessionId },
+      relations: ["session_questions.question"],
+    });
+
+    if (!session) {
+      throw new NotFoundException("세션을 찾을 수 없습니다.");
+    }
+
+    const questions = session.session_questions.map((sq) => sq.question);
+
+    return await this.inferKeywordsForStt(questions);
+  }
+
+  async inferRoleFromJobText(jobText: string): Promise<InterviewJobRoleDto> {
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: "gpt-5-nano",
+        messages: [
+          {
+            role: "system",
+            content:
+              "당신은 채용공고로부터 이 채용공고가 어떤 직군을 모집하는지를 추정해야합니다. ",
+          },
+          {
+            role: "user",
+            content: InterviewRolePrompt(jobText),
+          },
+        ],
+        reasoning_effort: "minimal",
+        response_format: { type: "text" },
+      });
+
+      const content = response.choices[0].message.content;
+
+      if (!content) {
+        return {
+          status: "failed",
+        };
+      }
+
+      return {
+        status: "completed",
+        job_role: content,
+      };
+    } catch (error) {
+      return {
+        status: "failed",
+      };
+    }
+  }
+
+  async inferKeywordsForStt(questions: Question[]) {
+    try {
+      const response = await this.openai.responses.parse({
+        model: "gpt-5-mini",
+        input: [
+          {
+            role: "system",
+            content:
+              "당신은 각 질문에 대해 음성 전사를 돕는 STT 키워드 목록을 산출하는 도우미입니다.",
+          },
+          {
+            role: "user",
+            content: SttKeywordPrompt(questions),
+          },
+        ],
+        text: {
+          format: sttKeywordFormat,
+        },
+        reasoning: { effort: "minimal" },
+      });
+
+      const parsed = response.output_parsed;
+
+      const safe = KeywordsForSttDtoSchema.safeParse(parsed);
+
+      if (!safe.success) {
+        console.error(safe.error);
+
+        return {
+          keywords: questions.map((q) => ({
+            id: q.id,
+            stt_keywords: [],
+          })),
+        };
+      }
+
+      const items = new Map(
+        safe.data.keywords.map((i) => [i.id, i.stt_keywords]),
+      );
+
+      const array = questions.map((q) => ({
+        id: q.id,
+        stt_keywords: items.get(q.id) ?? [],
+      }));
+
+      return { keywords: array };
+    } catch (error) {
+      console.error(error);
+
+      return {
+        keywords: questions.map((q) => ({ id: q.id, stt_keywords: [] })),
+      };
+    }
   }
 }

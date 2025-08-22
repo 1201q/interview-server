@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { zodTextFormat } from "openai/helpers/zod";
+import { zodResponseFormat, zodTextFormat } from "openai/helpers/zod";
 
 const QuestionItem = z.object({
   text: z.string(),
@@ -15,3 +15,20 @@ export const generatedQuestionFormat = zodTextFormat(
   QuestionSchema,
   "generatedQuestionFormat",
 );
+
+export const KeywordsForSttItemSchema = z.object({
+  id: z.string(),
+  stt_keywords: z.array(z.string()).min(5).max(20).default([]),
+});
+
+export const KeywordsForSttDtoSchema = z.object({
+  keywords: z.array(KeywordsForSttItemSchema).default([]),
+});
+
+export const sttKeywordFormat = zodTextFormat(
+  KeywordsForSttDtoSchema,
+  "sttKeywordSchema",
+);
+
+export type KeywordsForSttItemDto = z.infer<typeof KeywordsForSttItemSchema>;
+export type KeywordsForSttDto = z.infer<typeof KeywordsForSttDtoSchema>;

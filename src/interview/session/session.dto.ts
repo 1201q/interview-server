@@ -3,7 +3,9 @@ import { Type } from "class-transformer";
 import {
   ArrayNotEmpty,
   ArrayUnique,
+  IsArray,
   IsNumber,
+  IsOptional,
   IsUUID,
   ValidateNested,
 } from "class-validator";
@@ -76,4 +78,37 @@ export class InterviewSessionDetailDto {
 
   @ApiProperty({ type: [Object] })
   questions: any[];
+}
+
+export class InterviewJobRoleDto {
+  @ApiProperty({ description: "직군 이름", type: String })
+  @IsOptional()
+  job_role?: string;
+
+  @ApiProperty({
+    description: "요청 상태",
+    enum: ["completed", "failed"],
+  })
+  status: "completed" | "failed";
+}
+
+// stt
+export class KeywordsForSttItemDto {
+  @ApiProperty({ description: "질문 ID", format: "uuid" })
+  @IsUUID()
+  id: string;
+
+  @ApiProperty({ description: "keywords" })
+  @IsArray()
+  stt_keywords: string[];
+}
+
+export class KeywordsForSttDto {
+  @ValidateNested({ each: true })
+  @Type(() => KeywordsForSttItemDto)
+  @ArrayNotEmpty()
+  @ArrayUnique((o: KeywordsForSttItemDto) => o.id, {
+    message: "questionId must be unique",
+  })
+  keywords: KeywordsForSttItemDto[];
 }
