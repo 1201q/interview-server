@@ -31,15 +31,8 @@ export class SessionQuestionItemDto {
   order: number;
 }
 
-export class CreateInterviewSessionDto {
-  @ApiProperty({
-    description: "로그인한 사용자 ID",
-    type: "string",
-    format: "uuid",
-  })
-  @IsUUID()
-  user_id: string;
-
+// create
+export class CreateInterviewSessionBodyDto {
   @ApiProperty({
     description: "request ID",
     type: "string",
@@ -65,6 +58,13 @@ export class CreateInterviewSessionDto {
   })
   questions: SessionQuestionItemDto[];
 }
+
+export class CreateInterviewSessionDto extends CreateInterviewSessionBodyDto {
+  @ApiProperty({ description: "로그인한 사용자 ID", format: "uuid" })
+  @IsUUID()
+  user_id: string;
+}
+// create
 
 export class InterviewSessionDetailDto {
   @ApiProperty({ type: String, format: "uuid" })

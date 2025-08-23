@@ -22,7 +22,6 @@ import {
   sttKeywordFormat,
 } from "src/common/schemas/prompt.schema";
 import { SttKeywordPrompt } from "src/common/prompts/stt-keyword.prompt";
-import e from "express";
 
 @Injectable()
 export class InterviewSessionService {

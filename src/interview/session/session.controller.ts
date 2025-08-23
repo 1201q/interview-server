@@ -7,9 +7,16 @@ import {
   Param,
   Post,
   Query,
+  Req,
 } from "@nestjs/common";
 
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from "@nestjs/swagger";
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiCookieAuth,
+} from "@nestjs/swagger";
 import { InterviewSessionService } from "./session.service";
 
 import {
@@ -18,12 +25,19 @@ import {
   GenerateResponseDto,
   InterviewJobRoleDto,
   KeywordsForSttDto,
+  CreateInterviewSessionBodyDto,
 } from "./session.dto";
+
+import { Request } from "express";
+import { AuthService } from "src/auth/auth.service";
 
 @ApiTags("인터뷰 세션")
 @Controller("interview-session")
 export class InterviewSessionController {
-  constructor(private readonly sessionService: InterviewSessionService) {}
+  constructor(
+    private readonly sessionService: InterviewSessionService,
+    private readonly authService: AuthService,
+  ) {}
 
   @Get(":sessionId")
   @ApiOperation({ summary: "세션 상세 조회" })
@@ -33,13 +47,37 @@ export class InterviewSessionController {
     return this.sessionService.getSessionDetail(id);
   }
 
+  ///////////////////// create
   @Post("create")
   @ApiOperation({ summary: "새 면접 세션 생성" })
   @ApiResponse({ status: HttpStatus.CREATED, type: GenerateResponseDto })
+  @ApiCookieAuth("accessToken")
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() dto: CreateInterviewSessionDto) {
-    return this.sessionService.createSession(dto);
+  async create(
+    @Body() body: CreateInterviewSessionBodyDto,
+    @Req() req: Request,
+  ) {
+    const token = req.cookies.accessToken as string;
+    const { id } = await this.authService.decodeAccessToken(token);
+
+    return this.sessionService.createSession({
+      ...body,
+      user_id: id,
+    });
   }
+
+  @Post("create/test")
+  @ApiOperation({ summary: "새 면접 세션 생성 (테스트)" })
+  @ApiResponse({ status: HttpStatus.CREATED, type: GenerateResponseDto })
+  @HttpCode(HttpStatus.CREATED)
+  testCreate(@Body() body: CreateInterviewSessionBodyDto) {
+    const TEST_USER_ID = "88906d3d-8204-487b-93db-b4d436fca1df";
+    return this.sessionService.createSession({
+      ...body,
+      user_id: TEST_USER_ID,
+    });
+  }
+  ///////////////////// create
 
   @Post(":sessionId/start")
   @ApiOperation({ summary: "면접 세션 시작" })
