@@ -148,7 +148,16 @@ export class InterviewAnswerService {
   async testSubmitAnswer(
     sessionId: string,
     questionId: string,
+    audio: Express.Multer.File,
+    text: string,
   ): Promise<SubmitAnswerResponseDto> {
+    const seekable = await this.flaskService.convertToSeekableWebm(audio);
+
+    const objectName = await this.ociUploadService.uploadFileFromBuffer(
+      seekable,
+      `seekable-${audio.originalname}`,
+    );
+
     const resultDto =
       await this.dataSource.transaction<SubmitAnswerResponseDto>(
         async (manager) => {
@@ -173,8 +182,8 @@ export class InterviewAnswerService {
           // 해당 answer 변경 사항 업데이트
           await answerRepo.update(answer.id, {
             status: "submitted",
-            text: "테스트",
-
+            text,
+            audio_path: objectName,
             ended_at: new Date(),
           });
 

@@ -76,10 +76,13 @@ export class InterviewAnswerController {
 
   @Post(":questionId/submit/test")
   @ApiOperation({
-    summary: "응답 제출 및 다음 질문 준비 (테스트 - 음성, 꼬리질문 판별 x)",
+    summary: "응답 제출 및 다음 질문 준비 (테스트 - 꼬리질문 판별 x)",
   })
   @ApiParam({ name: "sessionId", description: "세션 ID" })
   @ApiParam({ name: "questionId", description: "세션 질문 ID" })
+  @ApiConsumes("multipart/form-data")
+  @UseInterceptors(FileInterceptor("audio"))
+  @ApiBody({ type: SubmitAnswerDto })
   @ApiResponse({
     status: HttpStatus.OK,
     type: SubmitAnswerResponseDto,
@@ -87,10 +90,18 @@ export class InterviewAnswerController {
   async testSubmit(
     @Param("sessionId") sessionId: string,
     @Param("questionId") questionId: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: SubmitAnswerDto,
   ): Promise<SubmitAnswerResponseDto> {
+    if (!file) {
+      throw new BadRequestException("audio 파일이 필요합니다.");
+    }
+
     const nextQuestion = await this.answerService.testSubmitAnswer(
       sessionId,
       questionId,
+      file,
+      body.answerText,
     );
     return nextQuestion;
   }
