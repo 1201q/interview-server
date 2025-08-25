@@ -73,4 +73,25 @@ export class InterviewAnswerController {
     );
     return nextQuestion;
   }
+
+  @Post(":questionId/submit/test")
+  @ApiOperation({
+    summary: "응답 제출 및 다음 질문 준비 (테스트 - 음성, 꼬리질문 판별 x)",
+  })
+  @ApiParam({ name: "sessionId", description: "세션 ID" })
+  @ApiParam({ name: "questionId", description: "세션 질문 ID" })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    type: SubmitAnswerResponseDto,
+  })
+  async testSubmit(
+    @Param("sessionId") sessionId: string,
+    @Param("questionId") questionId: string,
+  ): Promise<SubmitAnswerResponseDto> {
+    const nextQuestion = await this.answerService.testSubmitAnswer(
+      sessionId,
+      questionId,
+    );
+    return nextQuestion;
+  }
 }
