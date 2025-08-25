@@ -26,6 +26,7 @@ import {
   InterviewJobRoleDto,
   KeywordsForSttDto,
   CreateInterviewSessionBodyDto,
+  StartSessionResponseDto,
 } from "./session.dto";
 
 import { Request } from "express";
@@ -46,6 +47,20 @@ export class InterviewSessionController {
   getDetail(@Param("sessionId") id: string) {
     return this.sessionService.getSessionDetail(id);
   }
+
+  // reset = test
+
+  @Post(":sessionId/reset")
+  @ApiOperation({
+    summary: "해당 면접 세션 정보를 초기화",
+  })
+  @ApiParam({ name: "sessionId", description: "Session ID" })
+  @ApiResponse({ status: HttpStatus.OK, type: StartSessionResponseDto })
+  async reset(@Param("sessionId") sessionId: string) {
+    return this.sessionService.resetSession(sessionId);
+  }
+
+  //
 
   ///////////////////// create
   @Post("create")
@@ -82,7 +97,7 @@ export class InterviewSessionController {
   @Post(":sessionId/start")
   @ApiOperation({ summary: "면접 세션 시작" })
   @ApiParam({ name: "sessionId", description: "Session ID" })
-  @ApiResponse({ status: HttpStatus.OK, type: GenerateResponseDto })
+  @ApiResponse({ status: HttpStatus.OK, type: StartSessionResponseDto })
   startSession(@Param("sessionId") sessionId: string) {
     return this.sessionService.startSession(sessionId);
   }

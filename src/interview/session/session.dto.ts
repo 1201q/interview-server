@@ -21,6 +21,17 @@ export class GenerateResponseDto {
   status: "completed" | "failed";
 }
 
+export class StartSessionResponseDto {
+  @ApiProperty({ description: "세션 ID", type: String })
+  id: string;
+
+  @ApiProperty({
+    description: "세션 상태",
+    enum: ["not_started", "in_progress", "completed", "expired"],
+  })
+  status: "not_started" | "in_progress" | "completed" | "expired";
+}
+
 export class SessionQuestionItemDto {
   @ApiProperty({ description: "질문 ID", format: "uuid" })
   @IsUUID()

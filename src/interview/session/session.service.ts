@@ -97,6 +97,7 @@ export class InterviewSessionService {
       created_at: session.created_at.toISOString(),
       questions: session.session_questions.map((sq) => ({
         id: sq.id,
+        question_id: sq.question.id,
         order: sq.order,
         type: sq.type,
         text: sq.type === "main" ? sq.question.text : sq.followup_text,
@@ -279,5 +280,38 @@ export class InterviewSessionService {
         keywords: questions.map((q) => ({ id: q.id, stt_keywords: [] })),
       };
     }
+  }
+
+  // reset
+  async resetSession(sessionId: string) {
+    const session = await this.sessionRepo.findOne({
+      where: { id: sessionId },
+      relations: ["session_questions", "session_questions.answers"],
+    });
+
+    if (!session) {
+      throw new NotFoundException("세션을 찾을 수 없습니다.");
+    }
+
+    await this.dataSource.transaction(async (manager) => {
+      await manager
+        .getRepository(InterviewSession)
+        .update(session.id, { status: "not_started" });
+
+      for (const sq of session.session_questions) {
+        for (const ans of sq.answers ?? []) {
+          console.log(ans);
+          await manager.getRepository(Answer).update(ans.id, {
+            status: "waiting",
+            audio_path: null,
+            text: null,
+            started_at: null,
+            ended_at: null,
+          });
+        }
+      }
+    });
+
+    return { id: session.id, status: "not_started" };
   }
 }
