@@ -148,15 +148,19 @@ export class InterviewAnswerService {
   async testSubmitAnswer(
     sessionId: string,
     questionId: string,
-    audio: Express.Multer.File,
+    audio: Express.Multer.File | null,
     text: string,
   ): Promise<SubmitAnswerResponseDto> {
-    const seekable = await this.flaskService.convertToSeekableWebm(audio);
+    let objectName: string | undefined;
 
-    const objectName = await this.ociUploadService.uploadFileFromBuffer(
-      seekable,
-      `seekable-${audio.originalname}`,
-    );
+    if (audio) {
+      const seekable = await this.flaskService.convertToSeekableWebm(audio);
+
+      objectName = await this.ociUploadService.uploadFileFromBuffer(
+        seekable,
+        `seekable-${audio.originalname}`,
+      );
+    }
 
     const resultDto =
       await this.dataSource.transaction<SubmitAnswerResponseDto>(
@@ -180,12 +184,17 @@ export class InterviewAnswerService {
           }
 
           // 해당 answer 변경 사항 업데이트
-          await answerRepo.update(answer.id, {
+          const newData: Partial<Answer> = {
             status: "submitted",
             text,
-            audio_path: objectName,
             ended_at: new Date(),
-          });
+          };
+
+          if (objectName) {
+            newData.audio_path = objectName;
+          }
+
+          await answerRepo.update(answer.id, newData);
 
           const nextQuestion = await this.questionService.getNext(
             manager,
@@ -221,5 +230,20 @@ export class InterviewAnswerService {
       );
 
     return resultDto;
+  }
+
+  async testUpload(audio: Express.Multer.File) {
+    try {
+      const seekable = await this.flaskService.convertToSeekableWebm(audio);
+
+      const objectName = await this.ociUploadService.uploadFileFromBuffer(
+        seekable,
+        `seekable-${audio.originalname}`,
+      );
+
+      return { status: "completed", data: objectName };
+    } catch (error) {
+      return { status: "failed" };
+    }
   }
 }

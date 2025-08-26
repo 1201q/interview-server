@@ -19,16 +19,20 @@ import {
   ApiResponse,
   ApiParam,
 } from "@nestjs/swagger";
-import { SubmitAnswerDto, SubmitAnswerResponseDto } from "./answer.dto";
+import {
+  SubmitAnswerDto,
+  SubmitAnswerResponseDto,
+  UploadAudioDto,
+} from "./answer.dto";
 
 import { InterviewAnswerService } from "./answer.service";
 
 @ApiTags("인터뷰 답변")
-@Controller("interview-answer/:sessionId")
+@Controller("interview-answer")
 export class InterviewAnswerController {
   constructor(private readonly answerService: InterviewAnswerService) {}
 
-  @Post(":questionId/start")
+  @Post(":sessionId/:questionId/start")
   @ApiOperation({ summary: "질문 응답 시작" })
   @ApiParam({ name: "sessionId", description: "세션 ID" })
   @ApiParam({ name: "questionId", description: "세션 질문 ID" })
@@ -44,7 +48,7 @@ export class InterviewAnswerController {
     await this.answerService.startAnswer(sessionId, questionId);
   }
 
-  @Post(":questionId/submit")
+  @Post(":sessionId/:questionId/submit")
   @ApiOperation({ summary: "응답 제출 및 다음 질문 준비" })
   @ApiParam({ name: "sessionId", description: "세션 ID" })
   @ApiParam({ name: "questionId", description: "세션 질문 ID" })
@@ -74,7 +78,7 @@ export class InterviewAnswerController {
     return nextQuestion;
   }
 
-  @Post(":questionId/submit/test")
+  @Post(":sessionId/:questionId/submit/test")
   @ApiOperation({
     summary: "응답 제출 및 다음 질문 준비 (테스트 - 꼬리질문 판별 x)",
   })
@@ -82,7 +86,9 @@ export class InterviewAnswerController {
   @ApiParam({ name: "questionId", description: "세션 질문 ID" })
   @ApiConsumes("multipart/form-data")
   @UseInterceptors(FileInterceptor("audio"))
-  @ApiBody({ type: SubmitAnswerDto })
+  @ApiBody({
+    type: SubmitAnswerDto,
+  })
   @ApiResponse({
     status: HttpStatus.OK,
     type: SubmitAnswerResponseDto,
@@ -90,19 +96,38 @@ export class InterviewAnswerController {
   async testSubmit(
     @Param("sessionId") sessionId: string,
     @Param("questionId") questionId: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: Express.Multer.File | null,
     @Body() body: SubmitAnswerDto,
   ): Promise<SubmitAnswerResponseDto> {
+    const nextQuestion = await this.answerService.testSubmitAnswer(
+      sessionId,
+      questionId,
+      file ?? null,
+      body.answerText,
+    );
+    return nextQuestion;
+  }
+
+  @Post("/upload/test")
+  @ApiOperation({
+    summary: "음성 업로드 테스트",
+  })
+  @ApiConsumes("multipart/form-data")
+  @UseInterceptors(FileInterceptor("audio"))
+  @ApiBody({ type: UploadAudioDto })
+  @ApiResponse({
+    status: HttpStatus.OK,
+  })
+  async testUpload(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: UploadAudioDto,
+  ) {
     if (!file) {
       throw new BadRequestException("audio 파일이 필요합니다.");
     }
 
-    const nextQuestion = await this.answerService.testSubmitAnswer(
-      sessionId,
-      questionId,
-      file,
-      body.answerText,
-    );
-    return nextQuestion;
+    const res = await this.answerService.testUpload(file);
+
+    return res;
   }
 }

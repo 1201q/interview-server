@@ -12,14 +12,17 @@ export class StartAnswerDto {
   questionId: string;
 }
 
-export class SubmitAnswerDto {
+export class UploadAudioDto {
   @ApiProperty({
     type: "string",
     format: "binary",
     description: "업로드할 오디오 파일",
+    nullable: true,
   })
   audio: any;
+}
 
+export class SubmitAnswerDto extends UploadAudioDto {
   @ApiProperty({ description: "사용자 입력 답변 텍스트" })
   @IsString()
   answerText: string;
