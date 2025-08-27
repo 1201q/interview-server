@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { Transform } from "class-transformer";
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -6,28 +7,7 @@ import {
   IsOptional,
   IsString,
   MaxLength,
-  MinLength,
 } from "class-validator";
-
-export class RefineBodyDto {
-  @ApiProperty({
-    description: "transcript된 텍스트(보정할 텍스트)",
-    type: String,
-  })
-  @IsString()
-  @MinLength(1)
-  transcript!: string;
-
-  @ApiProperty({ description: "인터뷰일 경우 질문 텍스트", type: String })
-  @IsOptional()
-  @IsString()
-  question?: string;
-
-  @ApiProperty({ description: "프롬프트에 넣을 텍스트의 맥락", type: String })
-  @IsOptional()
-  @IsString()
-  context?: string;
-}
 
 export class CreateRealtimeTokenDto {
   @ApiPropertyOptional({
@@ -36,32 +16,63 @@ export class CreateRealtimeTokenDto {
   @IsOptional()
   @IsString()
   @MaxLength(50)
+  @Transform(({ value }) =>
+    typeof value === "string" ? value.trim() : undefined,
+  )
   jobRole?: string;
 
   @ApiPropertyOptional({ description: "질문 텍스트" })
   @IsOptional()
   @IsString()
+  @Transform(({ value }) =>
+    typeof value === "string" ? value.trim() : undefined,
+  )
   questionText?: string;
 
   @ApiPropertyOptional({
     description: "STT 바이어스 키워드 목록",
     isArray: true,
     type: String,
-    example: [
-      "AWS Systems Manager",
-      "SSM",
-      "EC2",
-      "AMI",
-      "Auto Scaling",
-      "Bash",
-      "Shell Script",
-      "cron",
-      "IAM role",
-    ],
   })
   @IsArray()
   @ArrayMaxSize(20)
   @ArrayMinSize(0)
   @IsString({ each: true })
+  @IsString({ each: true })
+  @Transform(({ value }) => {
+    if (!Array.isArray(value)) return [];
+    const uniq = Array.from(
+      new Set(value.map((s) => String(s).trim()).filter(Boolean)),
+    );
+    return uniq.slice(0, 20);
+  })
   keywords: string[] = [];
+}
+
+export class RefineBodyDto extends CreateRealtimeTokenDto {
+  @ApiProperty({ description: "transcript된 텍스트 (보정할 텍스트)" })
+  @IsString()
+  @Transform(({ value }) => String(value ?? "").trim())
+  transcript!: string;
+
+  @ApiPropertyOptional({ description: "직전 세그먼트 꼬리" })
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) =>
+    typeof value === "string" ? value.trim() : undefined,
+  )
+  prevTail?: string;
+}
+
+export class RefineResponseDto {
+  @ApiProperty({ description: "보정한 텍스트", type: String })
+  @IsOptional()
+  @IsString()
+  text?: string;
+
+  @ApiProperty({
+    description: "성공 상태",
+    enum: ["failed", "completed"],
+  })
+  status: "failed" | "completed";
 }

@@ -3,8 +3,12 @@ import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import axios from "axios";
 import { ConfigService } from "@nestjs/config";
 import OpenAI from "openai";
-import { RefineTextPrompt } from "src/common/prompts/refine.prompt";
+import {
+  RefineTextPrompt,
+  RefineTextPromptV2,
+} from "src/common/prompts/refine.prompt";
 import { SttBiasPrompt } from "src/common/prompts/stt-bias-prompt";
+import { RefineResponseDto } from "./transcribe.dto";
 
 @Injectable()
 export class TranscribeService {
@@ -53,17 +57,9 @@ export class TranscribeService {
     }
   }
 
-  async testcreateRealtimeSession(args: {
-    keywords: string[];
-    jobRole?: string;
-    questionText?: string;
-  }) {
+  async testcreateRealtimeSession(context: string) {
     try {
-      const prompt = SttBiasPrompt({
-        keywords: args.keywords,
-        questionText: args.questionText,
-        jobRole: args.jobRole,
-      });
+      const prompt = context;
 
       const response = await axios.post(
         "https://api.openai.com/v1/realtime/sessions",
@@ -102,22 +98,39 @@ export class TranscribeService {
     }
   }
 
-  async refineTranscript(context: string, transcript: string) {
-    const response = await this.openai.chat.completions.create({
-      model: "gpt-5-nano",
-      messages: [
-        {
-          role: "system",
-          content: "당신은 한국어 필사본을 보정하는 도우미입니다.",
-        },
-        { role: "user", content: RefineTextPrompt(context, transcript) },
-      ],
-      reasoning_effort: "low",
-      response_format: { type: "text" },
-    });
+  async refineTranscript(
+    context: string,
+    transcript: string,
+  ): Promise<RefineResponseDto> {
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: "gpt-5",
+        messages: [
+          {
+            role: "system",
+            content:
+              "당신은 한국어 STT 보정기다. 오탈자/전문용어/구두점만 최소 수정하고, 어투/의미/어순/단어 수는 유지한다.",
+          },
+          { role: "user", content: RefineTextPromptV2(context, transcript) },
+        ],
+        reasoning_effort: "minimal",
+        presence_penalty: 0,
+        frequency_penalty: 0,
+        response_format: { type: "text" },
+      });
 
-    console.log(response.choices[0].message.content);
+      const result = response.choices[0].message.content;
 
-    return response.choices[0].message.content;
+      return {
+        text: result,
+        status: "completed",
+      };
+    } catch (error) {
+      console.error(error);
+
+      return {
+        status: "failed",
+      };
+    }
   }
 }

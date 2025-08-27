@@ -21,3 +21,24 @@ export const RefineTextPrompt = (context: string, transcript: string) => {
     ${transcript}
   `;
 };
+
+export const RefineTextPromptV2 = (context: string, transcript: string) => {
+  return `
+    당신은 면접에서 답변한 내용을 실시간으로 필사한 텍스트를 교정하는 보정기입니다.
+
+    규칙(중요):
+    - 단어 추가/삭제 금지. 의미 변화 금지.
+    - 단어 순서와 개수 유지. 구두점(, . ?) 보정만 허용.
+    - 고유명사/전문용어/약어는 정확한 철자·대소문자·기호로 복원.
+    - 한국어는 한국어 그대로, 영문 기술어는 영문 그대로. 번역/요약 금지.
+    - 예상 단어 목록 중 발음이 유사한 단어가 있을 경우 치환.
+    - 전문 용어 위주로 보정. 비슷한 발음의 한국어로 필사된 경우가 많음.
+    - 출력은 오직 보정된 문장만. 설명/따옴표 금지.
+
+    컨텍스트:
+    ${context}
+
+    보정 대상(STT 원문):
+    ${transcript}
+  `.trim();
+};

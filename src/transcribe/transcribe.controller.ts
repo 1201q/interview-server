@@ -2,14 +2,25 @@ import {
   BadRequestException,
   Body,
   Controller,
+  HttpStatus,
   Post,
   Req,
 } from "@nestjs/common";
-import { ApiCookieAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import {
+  ApiCookieAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from "@nestjs/swagger";
 import { Request } from "express";
 import { AuthService } from "src/auth/auth.service";
 import { TranscribeService } from "./transcribe.service";
-import { CreateRealtimeTokenDto, RefineBodyDto } from "./transcribe.dto";
+import {
+  CreateRealtimeTokenDto,
+  RefineBodyDto,
+  RefineResponseDto,
+} from "./transcribe.dto";
+import { SttBiasPrompt } from "src/common/prompts/stt-bias-prompt";
 
 @ApiTags("음성 필사")
 @Controller("transcribe")
@@ -42,14 +53,19 @@ export class TranscribeController {
     @Req() req: Request,
     @Body() dto: CreateRealtimeTokenDto,
   ) {
+    const { jobRole, questionText, keywords } = dto;
+
     const token = req.cookies.accessToken as string;
     await this.authService.decodeAccessToken(token);
 
-    const session = await this.transcribeService.testcreateRealtimeSession({
-      keywords: dto.keywords,
-      questionText: dto.questionText,
-      jobRole: dto.jobRole,
+    const context = SttBiasPrompt({
+      keywords: keywords,
+      questionText: questionText,
+      jobRole: jobRole,
     });
+
+    const session =
+      await this.transcribeService.testcreateRealtimeSession(context);
 
     console.log(session);
 
@@ -58,31 +74,22 @@ export class TranscribeController {
 
   @Post("/refine")
   @ApiOperation({ summary: "텍스트 보정" })
+  @ApiResponse({ status: HttpStatus.OK, type: RefineResponseDto })
   async refineTranscript(@Body() body: RefineBodyDto) {
-    const { transcript, question, context } = body;
+    const { transcript, jobRole, questionText, keywords, prevTail } = body;
 
-    if (!transcript.trim()) {
-      throw new BadRequestException("transcript는 필수입니다.");
-    }
-
-    let promptContext = "";
-
-    if (question) {
-      promptContext +=
-        "이 텍스트는 면접 중 필사되었고, 다음 질문에 답변하였습니다. ";
-      promptContext += `질문: ${transcript}`;
-    }
-
-    if (context) {
-      promptContext += "이 텍스트는 해당 상황에서 필사되었습니다. ";
-      promptContext += `상황: ${context}`;
-    }
+    const context = SttBiasPrompt({
+      keywords: keywords,
+      questionText: questionText,
+      jobRole: jobRole,
+      prevTail: prevTail,
+    });
 
     const result = await this.transcribeService.refineTranscript(
-      promptContext,
+      context,
       transcript,
     );
 
-    return { final_text: result };
+    return result;
   }
 }
