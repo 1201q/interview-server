@@ -234,17 +234,18 @@ export class InterviewSessionService {
           {
             role: "system",
             content:
-              "당신은 각 질문에 대해 음성 전사를 돕는 STT 키워드 목록을 산출하는 도우미입니다.",
+              "당신은 STT(음성 인식) 성능을 높이기 위한 바이어스 키워드 리스트 생성기이다.",
           },
           {
             role: "user",
             content: SttKeywordPrompt(questions),
           },
         ],
+
         text: {
           format: sttKeywordFormat,
         },
-        reasoning: { effort: "minimal" },
+        reasoning: { effort: "low" },
       });
 
       const parsed = response.output_parsed;

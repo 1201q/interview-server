@@ -1,5 +1,13 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsOptional, IsString, MinLength } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from "class-validator";
 
 export class RefineBodyDto {
   @ApiProperty({
@@ -19,4 +27,41 @@ export class RefineBodyDto {
   @IsOptional()
   @IsString()
   context?: string;
+}
+
+export class CreateRealtimeTokenDto {
+  @ApiPropertyOptional({
+    description: "직군 힌트 (백엔드 개발자, 컨텐츠 마케터)",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  jobRole?: string;
+
+  @ApiPropertyOptional({ description: "질문 텍스트" })
+  @IsOptional()
+  @IsString()
+  questionText?: string;
+
+  @ApiPropertyOptional({
+    description: "STT 바이어스 키워드 목록",
+    isArray: true,
+    type: String,
+    example: [
+      "AWS Systems Manager",
+      "SSM",
+      "EC2",
+      "AMI",
+      "Auto Scaling",
+      "Bash",
+      "Shell Script",
+      "cron",
+      "IAM role",
+    ],
+  })
+  @IsArray()
+  @ArrayMaxSize(20)
+  @ArrayMinSize(0)
+  @IsString({ each: true })
+  keywords: string[] = [];
 }
