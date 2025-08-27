@@ -196,15 +196,14 @@ export class InterviewSessionService {
         messages: [
           {
             role: "system",
-            content:
-              "당신은 채용공고로부터 이 채용공고가 어떤 직군을 모집하는지를 추정해야합니다. ",
+            content: "당신의 임무는 채용공고로부터 직군명을 추정하는 것입니다.",
           },
           {
             role: "user",
             content: InterviewRolePrompt(jobText),
           },
         ],
-        reasoning_effort: "minimal",
+        reasoning_effort: "medium",
         response_format: { type: "text" },
       });
 
