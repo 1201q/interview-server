@@ -15,6 +15,7 @@ import { FollwupModule } from "./interview/followup/followup.module";
 import { TranscribeModule } from "./transcribe/transcribe.module";
 import { ExternalServerModule } from "./external-server/external-server.module";
 import { GenerateQuestionModule } from "./generate-question/generate-question.module";
+import { AnalyzeModule } from "./analyze/analyze.module";
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { GenerateQuestionModule } from "./generate-question/generate-question.mo
     FollwupModule,
     ExternalServerModule,
     TranscribeModule,
+    AnalyzeModule,
   ],
   controllers: [AppController],
   providers: [AppService],
