@@ -1,9 +1,18 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import OpenAI from "openai";
-import { EvaluationAnswerPrompt } from "src/common/prompts/analyze.prompt";
+import {
+  EvaluationAnswerPrompt,
+  EvaluationAnswerPromptV2,
+  EvaluationAnswerPromptV2_2,
+  EvaluationNarrativeOnlyPrompt,
+} from "src/common/prompts/analyze.prompt";
 import { EvalRequestDto } from "./analyze.dto";
-import { evalFormat, EvalSchema } from "src/common/schemas/prompt.schema";
+import {
+  evalFormat,
+  EvalSchema,
+  evalV2Format,
+} from "src/common/schemas/eval.schema";
 
 @Injectable()
 export class AnalyzeService {
@@ -24,13 +33,14 @@ export class AnalyzeService {
             role: "system",
             content: "당신은 한 기업의 면접관입니다.",
           },
-          { role: "user", content: EvaluationAnswerPrompt(dto) },
+          { role: "user", content: EvaluationNarrativeOnlyPrompt(dto) },
         ],
         reasoning: { effort: "minimal" },
-        text: { format: evalFormat },
+
+        // text: { format: evalV2Format },
       });
 
-      const parsed = response.output_parsed;
+      const parsed = JSON.parse(response.output_text);
 
       console.log(parsed);
 

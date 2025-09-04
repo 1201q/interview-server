@@ -20,6 +20,7 @@ import { ConfigService } from "@nestjs/config";
 import {
   QuestionGeneratorPrompt,
   QuestionGeneratorPromptV2,
+  QuestionGeneratorPromptV3,
   QuestionGeneratorSystemPrompt,
 } from "src/common/prompts/question-generator.prompt";
 import { Response } from "express";
@@ -197,12 +198,12 @@ export class GenerateQuestionService {
     requestEntity.status = "working";
     await this.requestRepo.save(requestEntity);
 
-    const limits = { basic: 3, experience: 6, job_related: 4, expertise: 7 };
+    const limits = { basic: 1, experience: 3, job_related: 3, expertise: 3 };
     const limitCount = Object.values(limits).reduce((sum, v) => sum + v, 0);
 
     let createdTotal = 0;
 
-    const prompt_text = QuestionGeneratorPromptV2(
+    const prompt_text = QuestionGeneratorPromptV3(
       requestEntity.resume_text,
       requestEntity.job_text,
       limits,
@@ -221,6 +222,8 @@ export class GenerateQuestionService {
         const item = QuestionItem.parse(value);
 
         createdTotal += 1;
+
+        console.log(item);
 
         res.write(`event: question\ndata: ${JSON.stringify(item)}\n\n`);
         res.write(
@@ -242,6 +245,8 @@ export class GenerateQuestionService {
       try {
         const result = await stream.finalResponse();
 
+        console.log(result);
+
         const questions = result.output_parsed.questions.map((q) =>
           this.questionRepo.create({
             request: requestEntity,
@@ -255,8 +260,6 @@ export class GenerateQuestionService {
 
         requestEntity.status = "completed";
         await this.requestRepo.save(requestEntity);
-
-        console.log(requestEntity);
 
         res.write("event: done\ndata: [DONE]\n\n");
       } catch (error) {
