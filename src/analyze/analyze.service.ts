@@ -1,18 +1,10 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import OpenAI from "openai";
-import {
-  EvaluationAnswerPrompt,
-  EvaluationAnswerPromptV2,
-  EvaluationAnswerPromptV2_2,
-  EvaluationNarrativeOnlyPrompt,
-} from "src/common/prompts/analyze.prompt";
+import { BuildEvaluationPrompt } from "src/common/prompts/analyze.prompt";
 import { EvalRequestDto } from "./analyze.dto";
-import {
-  evalFormat,
-  EvalSchema,
-  evalV2Format,
-} from "src/common/schemas/eval.schema";
+import { evalJsonSchema } from "src/common/schemas/eval.schema";
+import { computeScores } from "src/common/utils/scoring";
 
 @Injectable()
 export class AnalyzeService {
@@ -26,58 +18,33 @@ export class AnalyzeService {
 
   async evaluateAnswer(dto: EvalRequestDto) {
     try {
-      const response = await this.openai.responses.parse({
+      const res = await this.openai.responses.parse({
         model: "gpt-5",
         input: [
           {
             role: "system",
-            content: "당신은 한 기업의 면접관입니다.",
+            content:
+              "당신은 한 기업의 면접관입니다. 면접관으로서 답변에 대한 평가와 피드백을 제공하세요.",
           },
-          { role: "user", content: EvaluationNarrativeOnlyPrompt(dto) },
+          { role: "user", content: BuildEvaluationPrompt(dto) },
         ],
-        reasoning: { effort: "minimal" },
-
-        // text: { format: evalV2Format },
+        reasoning: { effort: "low" },
+        text: { format: evalJsonSchema },
       });
 
-      const parsed = JSON.parse(response.output_text);
+      const result = res.output_parsed;
 
-      console.log(parsed);
+      const calc = computeScores(result.metrics, {
+        ValueChain_missing: result.flags.ValueChain_missing ?? false,
+        Evidence_missing: result.flags.Evidence_missing ?? false,
+        Scenario_missing: result.flags.Scenario_missing ?? false,
+        Concept_error: result.flags.Concept_error ?? false,
+        Offtopic: result.flags.Offtopic ?? false,
+      });
 
-      return parsed;
-    } catch (error) {}
-  }
+      console.log(result, calc);
 
-  async streamEvaluateAnswer(dto: EvalRequestDto) {
-    try {
-      const stream = this.openai.responses
-        .stream({
-          model: "gpt-5",
-          input: [
-            {
-              role: "system",
-              content: "당신은 한 기업의 면접관입니다.",
-            },
-            { role: "user", content: EvaluationAnswerPrompt(dto) },
-          ],
-          text: { format: evalFormat },
-        })
-        .on("response.refusal.delta", (event) => {
-          console.log(event.delta);
-          process.stdout.write(event.delta);
-        })
-        .on("response.output_text.delta", (event) => {
-          console.log(event.delta);
-          process.stdout.write(event.delta);
-        })
-        .on("response.output_text.done", () => {
-          console.log("\n");
-          process.stdout.write("\n");
-        });
-
-      const result = await stream.finalResponse();
-
-      console.log(result);
+      return { ...result, ...calc };
     } catch (error) {}
   }
 }

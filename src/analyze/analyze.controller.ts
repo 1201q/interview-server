@@ -1,17 +1,4 @@
-import {
-  BadRequestException,
-  Body,
-  Controller,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Res,
-  Param,
-  Post,
-  UploadedFile,
-  UseInterceptors,
-  Query,
-} from "@nestjs/common";
+import { Body, Controller, Post } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { EvalRequestDto } from "./analyze.dto";
 import { AnalyzeService } from "./analyze.service";
