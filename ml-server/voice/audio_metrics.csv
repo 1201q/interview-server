@@ -1,0 +1,8 @@
+file_id,duration_sec,snr_db,clipping_pct,lufs_short_term_sd,reverb_level,crest_db,f0_range_st,upspeak_ratio,voice_breaks_per_min,avg_phrase_sec,phrase_len_sd
+broswer,48.54,6.1,0.0,,unknown,21.62,25.68,0.833,0.0,6.03,4.94
+convert,51.0,5.91,0.0,,unknown,20.16,29.54,0.833,0.0,5.37,3.93
+eslint2,39.96,7.06,0.0,,unknown,19.44,26.63,0.5,1.5,5.81,1.32
+female1,89.99,3.05,0.0,,unknown,22.45,28.46,0.5,0.67,20.39,9.09
+female2,53.2,1.31,0.0,,unknown,20.93,30.3,0.8,0.0,12.25,5.27
+input,89.62,9.96,0.0,,unknown,23.42,29.72,0.545,0.0,14.12,4.97
+input2,89.42,6.48,0.0,,unknown,23.65,31.01,0.6,0.67,13.88,8.63
