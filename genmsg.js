@@ -33,7 +33,6 @@ const res = await client.chat.completions.create({
 ${diff}`,
     },
   ],
-  temperature: 0.3,
 });
 
 // 그냥 메시지만 출력
