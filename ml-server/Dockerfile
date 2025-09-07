@@ -13,6 +13,7 @@ RUN micromamba create -n ml-env \
     numpy \
     librosa \
     ffmpeg \
+    webrtcvad \
     ets::praat-parselmouth \
     -y
 
