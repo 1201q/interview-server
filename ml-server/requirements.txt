@@ -4,5 +4,4 @@ pydub
 ffmpeg-python
 soundfile
 pymupdf
-
 pyloudnorm

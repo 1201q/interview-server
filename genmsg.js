@@ -9,7 +9,7 @@ const diff = execSync("git diff --cached --no-color", {
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const res = await client.chat.completions.create({
-  model: "gpt-4o-mini",
+  model: "gpt-5-mini",
   messages: [
     {
       role: "user",
