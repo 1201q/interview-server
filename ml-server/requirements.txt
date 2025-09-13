@@ -1,3 +1,9 @@
+tensorflow==2.17.0
+numpy==1.26.4
+scipy==1.11.4
+librosa==0.10.1
+webrtcvad-wheels==2.0.14
+
 openai==1.82.0
 pdfplumber
 pydub
@@ -5,5 +11,3 @@ ffmpeg-python
 soundfile
 pymupdf
 pyloudnorm
-webrtcvad-wheels==2.0.14
-tensorflow==2.17.0
