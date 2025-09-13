@@ -3,12 +3,11 @@ from dotenv import load_dotenv
 import os, tempfile
 from werkzeug.utils import secure_filename
 from urllib.parse import urljoin
-
 from convert import *
 
 from io import BytesIO
+from core_filler import run_filler_analysis_bytes
 
-from analysis_main import *
 import tempfile, os
 import fitz
 import traceback
@@ -16,19 +15,59 @@ import traceback
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
+
 app = Flask(__name__)
 NEST_URL = os.getenv("NEST_URL", "http://localhost:8000")
 webhook_url = urljoin(NEST_URL, "/analysis/webhook")
+model_path = os.getenv("FILLER_MODEL", "/model/new_filler_determine_model.h5")
 
 
-@app.route("/")
+@app.get("/")
 def hello():
     py_test = os.getenv("PY_TEST", "값 없음")
     return f" PY_TEST 환경변수  : {py_test}"
 
 
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
+
+@app.post("/voice/metrics")
+def voice_metrics():
+
+    audio_bytes = None
+
+    if "audio" in request.files:
+        audio_bytes = request.files["audio"].read()
+    else:
+        audio_bytes = request.get_data()
+
+    if not audio_bytes:
+        return jsonify({"error": "오디오 데이터가 없습니다."}), 400
+
+    segmentation = request.args.get("segmentation", "adaptive")
+
+    params = None
+    if request.is_json:
+        body = request.get_json(silent=True) or {}
+        params = body.get("params")
+
+    try:
+        result = run_filler_analysis_bytes(
+            audio_bytes=audio_bytes,
+            model_path=model_path,
+            segmentation=segmentation,
+            params=params,
+        )
+        return jsonify(result)
+    except Exception as e:
+        app.logger.exception("voice_metrics error")
+        return jsonify({"error": "서버 내부 오류", "msg": str(e)}), 500
+
+
 # webm -> seekable webm으로 변환
-@app.route("/convert_seekable", methods=["POST"])
+@app.post("/convert_seekable")
 def convert_seekable():
     file = request.files["file"]
 
@@ -56,7 +95,8 @@ def convert_seekable():
             return jsonify({"error": "서버 내부 오류", "msg": str(e)}), 500
 
 
-@app.route("/extract_text", methods=["POST"])
+# pdf에서 텍스트 추출
+@app.post("/extract_text")
 def extract_text():
     file = request.files.get("file")
     if not file:

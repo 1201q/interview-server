@@ -1,3 +1,0 @@
-file_id,audio_path,transcript_path
-input,./wav/input.wav,./json/input.json
-female1,./wav/female1.wav,./json/female1.json
