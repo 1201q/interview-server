@@ -3,19 +3,18 @@ FROM mambaorg/micromamba:1.4.3 AS builder
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN micromamba create -n ml-env \
-    -c conda-forge \        
-    --strict-channel-priority \             
+    -c conda-forge \
+    --strict-channel-priority \      
     python=3.10 \
     pip \
     flask \
     gunicorn \
     python-dotenv \
     requests \
-    numpy=1.26 \
-    scipy=1.11 \
-    librosa \
-    webrtcvad         \
     ffmpeg \
+    libsndfile \
+    webrtcvad \
+    soxr \
     -y
 
 WORKDIR /app
