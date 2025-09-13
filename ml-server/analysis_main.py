@@ -1,18 +1,12 @@
-from ast import Dict
-from typing import Any, Optional
-from flask import Flask, request, jsonify, send_file
 from dotenv import load_dotenv
 import os, tempfile
-from werkzeug.utils import secure_filename
+
 from urllib.parse import urljoin
 
 from convert import *
 from analysis_functions import *
 from transcribe import *
-from analysis import analyze_audio
-from io import BytesIO
 
-import numpy as np
 
 import tempfile, os, requests
 
