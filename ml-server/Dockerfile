@@ -10,10 +10,11 @@ RUN micromamba create -n ml-env \
     gunicorn \
     python-dotenv \
     requests \
-    numpy \
+    numpy=1.26 \
     librosa \
     ffmpeg \
     ets::praat-parselmouth \
+    webrtcvad         \
     -y
 
 WORKDIR /app
