@@ -4,17 +4,18 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN micromamba create -n ml-env \
     -c conda-forge \        
-    -c ets \                
+    --strict-channel-priority \             
     python=3.10 \
+    pip \
     flask \
     gunicorn \
     python-dotenv \
     requests \
     numpy=1.26 \
+    scipy=1.11 \
     librosa \
-    ffmpeg \
-    ets::praat-parselmouth \
     webrtcvad         \
+    ffmpeg \
     -y
 
 WORKDIR /app
@@ -34,7 +35,7 @@ WORKDIR /app
 
 COPY --from=builder /opt/conda/envs/ml-env /opt/conda/envs/ml-env
 ENV PATH=/opt/conda/envs/ml-env/bin:$PATH
-
+ENV LD_LIBRARY_PATH=/opt/conda/envs/ml-env/lib:$LD_LIBRARY_PATH
 
 COPY --from=builder /app /app
 
