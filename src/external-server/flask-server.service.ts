@@ -31,6 +31,26 @@ export class FlaskServerService {
     return Buffer.from(response.data);
   }
 
+  async getVoiceMetrics(webm: Express.Multer.File) {
+    const baseUrl = this.configService.get<string>("ML_SERVER_URL");
+
+    const form = new FormData();
+    form.append("audio", Readable.from(webm.buffer), {
+      filename: webm.originalname,
+      contentType: webm.mimetype,
+    });
+
+    const response = await lastValueFrom(
+      this.httpService.post(`${baseUrl}/voice_metrics`, form, {
+        headers: form.getHeaders(),
+      }),
+    );
+
+    console.log(response.data);
+
+    return response.data;
+  }
+
   async extractTextFromPDF(
     file: Express.Multer.File,
     decodedFilename: string,

@@ -1,3 +1,4 @@
+import mimetypes
 from flask import Flask, request, jsonify, send_file
 from dotenv import load_dotenv
 import os, tempfile
@@ -8,18 +9,31 @@ from convert import *
 from io import BytesIO
 from core_filler import run_filler_analysis_bytes
 
+from functools import lru_cache
+import tensorflow as tf
+
 import tempfile, os
 import fitz
 import traceback
+from pathlib import Path
 
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
+BASE_DIR = Path(__file__).resolve().parent
 
 app = Flask(__name__)
 NEST_URL = os.getenv("NEST_URL", "http://localhost:8000")
 webhook_url = urljoin(NEST_URL, "/analysis/webhook")
-model_path = os.getenv("FILLER_MODEL", "/model/new_filler_determine_model.h5")
+
+DEFAULT_MODEL = BASE_DIR / "model" / "new_filler_determine_model.h5"
+
+model_path = str(DEFAULT_MODEL)
+
+
+@lru_cache(maxsize=2)
+def load_filler_model(model_path: str):
+    return tf.keras.models.load_model(model_path)
 
 
 @app.get("/")
@@ -28,23 +42,51 @@ def hello():
     return f" PY_TEST 환경변수  : {py_test}"
 
 
+@app.get("/routes")
+def routes():
+    return {
+        "routes": [
+            {"rule": str(r.rule), "methods": list(r.methods)}
+            for r in app.url_map.iter_rules()
+        ]
+    }
+
+
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
 
 
-@app.post("/voice/metrics")
+@app.post("/voice_metrics")
 def voice_metrics():
-
     audio_bytes = None
 
     if "audio" in request.files:
-        audio_bytes = request.files["audio"].read()
+        f = request.files["audio"]
+        audio_bytes = f.read()
+        mimetype = f.mimetype
     else:
         audio_bytes = request.get_data()
+        mimetype = request.content_type or "application/octet-stream"
 
     if not audio_bytes:
         return jsonify({"error": "오디오 데이터가 없습니다."}), 400
+
+    def _ensure_wav(audio_bytes: bytes, mimetype: str) -> bytes:
+        if mimetype in ("audio/wav", "audio/x-wav"):
+            # 이미 WAV면 그대로 사용
+            return audio_bytes
+        elif mimetype in ("audio/webm", "video/webm"):
+            # webm → wav 변환
+            return webm_to_wav_bytes(audio_bytes)
+        else:
+            raise ValueError(f"지원하지 않는 오디오 형식: {mimetype}")
+
+    try:
+        wav_bytes = _ensure_wav(audio_bytes, mimetype)
+    except Exception as e:
+        app.logger.exception("webm 변환 실패")
+        return jsonify({"error": "webm→wav 변환 실패", "msg": str(e)}), 500
 
     segmentation = request.args.get("segmentation", "adaptive")
 
@@ -53,10 +95,12 @@ def voice_metrics():
         body = request.get_json(silent=True) or {}
         params = body.get("params")
 
+    model = load_filler_model(model_path)
+
     try:
         result = run_filler_analysis_bytes(
-            audio_bytes=audio_bytes,
-            model_path=model_path,
+            audio_bytes=wav_bytes,
+            model=model,
             segmentation=segmentation,
             params=params,
         )

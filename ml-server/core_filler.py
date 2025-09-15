@@ -4,9 +4,9 @@ from typing import List, Tuple, Dict, Any
 import io
 import numpy as np
 
-from functools import lru_cache
+
 from pydub import AudioSegment
-import tensorflow as tf
+
 import func_filler as ff
 
 
@@ -78,14 +78,9 @@ def complement_iv(A: List[Interval], total_ms: int) -> List[Interval]:
     return out
 
 
-@lru_cache(maxsize=2)
-def load_filler_model(model_path: str):
-    return tf.keras.models.load_model(model_path)
-
-
 def run_filler_analysis_bytes(
     audio_bytes: bytes,
-    model_path: str,
+    model,
     segmentation: str = "adaptive",  # 'adaptive' | 'vad' | 'pydub'
     params: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
@@ -95,8 +90,6 @@ def run_filler_analysis_bytes(
     full = AudioSegment.from_file(io.BytesIO(audio_bytes))
     gain = -1.0 - (full.max_dBFS if full.max_dBFS != float("-inf") else -1.0)
     full = full.apply_gain(gain)
-
-    model = load_filler_model(model_path)
 
     # 1. 전역 발화 구간
     if segmentation == "vad":

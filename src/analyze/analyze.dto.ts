@@ -19,3 +19,13 @@ export class EvalRequestDto {
   @IsNotEmpty()
   transcript: string;
 }
+
+export class UploadAudioDto {
+  @ApiProperty({
+    type: "string",
+    format: "binary",
+    description: "업로드할 오디오 파일",
+    nullable: true,
+  })
+  audio: any;
+}
