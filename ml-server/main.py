@@ -1,4 +1,3 @@
-import mimetypes
 from flask import Flask, request, jsonify, send_file
 from dotenv import load_dotenv
 import os, tempfile
@@ -14,6 +13,7 @@ import tensorflow as tf
 
 import tempfile, os
 import fitz
+import pymupdf4llm
 import traceback
 from pathlib import Path
 
@@ -150,6 +150,9 @@ def extract_text():
         raw_data = file.read()
         pdf = fitz.open(stream=raw_data, filetype="pdf")
 
+        md_text = pymupdf4llm.to_markdown(pdf)
+        print(md_text)
+
         markdown_text = ""
         for i, page in enumerate(pdf):
             try:
@@ -160,7 +163,7 @@ def extract_text():
             if page_text:
                 markdown_text += page_text + "\n"
 
-        return jsonify({"result": markdown_text.strip()})
+        return jsonify({"result": md_text.strip(), "fallback": markdown_text.strip()})
     except Exception as e:
 
         traceback.print_exc()

@@ -132,6 +132,8 @@ export class GenerateQuestionController {
       );
     }
 
+    console.log(data);
+
     return { result: data.result };
   }
 }

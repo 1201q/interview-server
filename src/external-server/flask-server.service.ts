@@ -54,7 +54,7 @@ export class FlaskServerService {
   async extractTextFromPDF(
     file: Express.Multer.File,
     decodedFilename: string,
-  ): Promise<{ result: string }> {
+  ): Promise<{ result: string; fallback: string }> {
     const baseUrl = this.configService.get<string>("ML_SERVER_URL");
 
     const form = new FormData();
@@ -69,6 +69,30 @@ export class FlaskServerService {
       }),
     );
 
-    return response.data;
+    const { result, fallback } = response.data;
+
+    return { result: this.tidyText(result), fallback: fallback };
+  }
+
+  tidyText(input: string) {
+    let s = input.replace(/\r\n/g, "\n"); // CRLF → LF 통일
+
+    // 앞뒤 공백 제거
+    s = s.trim();
+
+    // 숫자만/특수문자만 있는 단독 라인 제거 (페이지 번호 등)
+    s = s.replace(/^\s*[\d\|]+\s*$/gm, "");
+
+    // 연속 빈 줄을 하나로 줄이기
+    s = s.replace(/\n{2,}/g, "\n\n");
+
+    // 문장 중간의 줄바꿈 → 공백
+    // (단, URL, 불릿(-, •, *) 줄은 유지)
+    s = s.replace(/([^\.\?\!\)])\n(?!\n|[-•*]|https?:\/\/)/g, "$1 ");
+
+    // 너무 긴 공백 줄 정리
+    s = s.replace(/[ \t]+/g, " ");
+
+    return s.trim();
   }
 }
