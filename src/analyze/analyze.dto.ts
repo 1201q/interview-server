@@ -1,5 +1,5 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsNotEmpty, IsString } from "class-validator";
+import { ApiProperty, IntersectionType } from "@nestjs/swagger";
+import { IsArray, IsNotEmpty, IsOptional, IsString } from "class-validator";
 
 export class EvalRequestDto {
   @ApiProperty({ description: "질문 텍스트", type: String })
@@ -28,4 +28,47 @@ export class UploadAudioDto {
     nullable: true,
   })
   audio: any;
+}
+
+export class STTRequestDto extends UploadAudioDto {
+  @ApiProperty({
+    description: "질문 타입",
+    enum: ["basic", "experience", "job_related", "expertise"],
+    default: "experience",
+  })
+  @IsNotEmpty()
+  section: "basic" | "experience" | "job_related" | "expertise";
+
+  @ApiProperty({ description: "질문 텍스트", required: false })
+  @IsString()
+  @IsOptional()
+  questionText?: string;
+
+  @ApiProperty({
+    description: "직군",
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  jobRole?: string;
+}
+
+export class STTRefineDto {
+  @ApiProperty({ description: "질문 텍스트", required: false })
+  @IsString()
+  @IsOptional()
+  questionText?: string;
+
+  @ApiProperty({
+    description: "직군",
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  jobRole?: string;
+
+  @ApiProperty({ description: "필사 텍스트", isArray: true })
+  @IsArray()
+  @IsNotEmpty()
+  words: string[];
 }

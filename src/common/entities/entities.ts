@@ -147,8 +147,17 @@ export class AnswerAnalysis {
   @Column({ default: "pending" })
   status: "pending" | "processing" | "completed" | "failed";
 
-  @Column("clob", { nullable: true })
-  result_json: string;
+  @Column("json", { nullable: true })
+  feedback_json: object;
+
+  @Column("json", { nullable: true })
+  stt_json: object;
+
+  @Column("json", { nullable: true })
+  refined_words_json: object;
+
+  @Column("json", { nullable: true })
+  voice_json: object;
 
   @CreateDateColumn()
   created_at: Date;
