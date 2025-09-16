@@ -3,31 +3,32 @@ import {
   Body,
   Controller,
   Get,
+  Param,
   Post,
   Query,
   UploadedFile,
   UseInterceptors,
 } from "@nestjs/common";
 import { ApiConsumes, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { EvalRequestDto, STTRequestDto, UploadAudioDto } from "./analyze.dto";
-import { AnalyzeService } from "./analyze.service";
+import { EvalRequestDto, STTRequestDto, UploadAudioDto } from "../analysis.dto";
+import { AnalysisService } from "../services/analysis.service";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { FlaskServerService } from "src/external-server/flask-server.service";
-import { JobsService } from "./queue/jobs.service";
+import { AnalysisOrchestratorService } from "../services/analysis.orchestrator.service";
 
 @ApiTags("분석")
-@Controller("analyze")
-export class AnalyzeController {
+@Controller("analysis")
+export class AnalysisController {
   constructor(
-    private readonly analyzeService: AnalyzeService,
-    private readonly jobsService: JobsService,
+    private readonly analysisService: AnalysisService,
     private readonly flaskService: FlaskServerService,
+    private readonly orchestrator: AnalysisOrchestratorService,
   ) {}
 
   @Post()
   @ApiOperation({ summary: "질문 평가 요청" })
   async EvalAnswer(@Body() dto: EvalRequestDto) {
-    return await this.analyzeService.evaluateAnswer(dto);
+    return await this.analysisService.evaluateAnswer(dto);
   }
 
   @Post("/voice/test")
@@ -64,9 +65,9 @@ export class AnalyzeController {
       throw new BadRequestException("audio 파일이 필요합니다.");
     }
 
-    const res = await this.analyzeService.transcript(file);
+    const res = await this.analysisService.transcript(file);
 
-    const refined = await this.analyzeService.refineSttWords({
+    const refined = await this.analysisService.refineSttWords({
       words: res.words.map((w) => w.word),
       questionText: dto.questionText,
       jobRole: dto.jobRole,
@@ -75,7 +76,7 @@ export class AnalyzeController {
     const finalText = refined.join(" ");
 
     if (mode) {
-      const evalAnswer = await this.analyzeService.evaluateAnswer({
+      const evalAnswer = await this.analysisService.evaluateAnswer({
         transcript: finalText,
         section: dto.section,
         questionText: dto.questionText,
@@ -86,9 +87,8 @@ export class AnalyzeController {
     return refined;
   }
 
-  @Get("/test")
-  async test() {
-    this.jobsService.enqueueAnalyze({ answerId: "@!@#!$", url: "!" });
-    return "!";
+  @Get("/test/:answerId")
+  async test(@Param("answerId") answerId: string) {
+    return this.orchestrator.start(answerId);
   }
 }

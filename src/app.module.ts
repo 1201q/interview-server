@@ -15,10 +15,7 @@ import { FollwupModule } from "./interview/followup/followup.module";
 import { TranscribeModule } from "./transcribe/transcribe.module";
 import { ExternalServerModule } from "./external-server/external-server.module";
 import { GenerateQuestionModule } from "./generate-question/generate-question.module";
-import { AnalyzeModule } from "./analyze/analyze.module";
-import { BullModule } from "@nestjs/bullmq";
-import { BullBoardModule } from "@bull-board/nestjs";
-import { ExpressAdapter } from "@bull-board/express";
+import { AnalysisModule } from "./analysis/analysis.module";
 
 @Module({
   imports: [
@@ -32,22 +29,7 @@ import { ExpressAdapter } from "@bull-board/express";
       synchronize: false,
       logging: false,
     }),
-    BullModule.forRoot({
-      connection: {
-        host: process.env.REDIS_HOST ?? "redis",
-        port: Number(process.env.REDIS_PORT),
-      },
-      defaultJobOptions: {
-        attempts: 3,
-        backoff: { type: "exponential", delay: 2000 },
-        removeOnComplete: 1000,
-        removeOnFail: 5000,
-      },
-    }),
-    BullBoardModule.forRoot({
-      route: "/admin/queues",
-      adapter: ExpressAdapter,
-    }),
+
     HttpModule,
     AuthModule,
     UserModule,
@@ -57,7 +39,7 @@ import { ExpressAdapter } from "@bull-board/express";
     FollwupModule,
     ExternalServerModule,
     TranscribeModule,
-    AnalyzeModule,
+    AnalysisModule,
   ],
   controllers: [AppController],
   providers: [AppService],

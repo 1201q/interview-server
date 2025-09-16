@@ -1,4 +1,4 @@
-import { STTRefineDto } from "src/analyze/analyze.dto";
+import { STTRefineDto } from "src/analysis/analysis.dto";
 
 export const BuildSttRefinePrompt = ({
   questionText,

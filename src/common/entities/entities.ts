@@ -141,7 +141,7 @@ export class AnswerAnalysis {
   @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @ManyToOne(() => Answer, { onDelete: "CASCADE" })
+  @ManyToOne(() => Answer, { onDelete: "CASCADE", eager: true })
   answer: Answer;
 
   @Column({ default: "pending" })
@@ -158,6 +158,9 @@ export class AnswerAnalysis {
 
   @Column("json", { nullable: true })
   voice_json: object;
+
+  @Column("clob", { nullable: true })
+  last_error?: string | null;
 
   @CreateDateColumn()
   created_at: Date;

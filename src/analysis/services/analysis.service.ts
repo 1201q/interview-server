@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import OpenAI from "openai";
 import { BuildEvaluationPrompt } from "src/common/prompts/analyze.prompt";
-import { EvalRequestDto, STTRefineDto } from "./analyze.dto";
+import { EvalRequestDto, STTRefineDto } from "../analysis.dto";
 import { evalJsonSchema } from "src/common/schemas/eval.schema";
 import { computeScores } from "src/common/utils/scoring";
 import { Readable } from "stream";
@@ -11,7 +11,7 @@ import z from "zod";
 import { DataSource } from "typeorm";
 
 @Injectable()
-export class AnalyzeService {
+export class AnalysisService {
   private openai: OpenAI;
 
   constructor(
