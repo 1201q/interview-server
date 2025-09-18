@@ -3,10 +3,7 @@ from dataclasses import dataclass
 from typing import List, Tuple, Dict, Any
 import io
 import numpy as np
-
-
 from pydub import AudioSegment
-
 import func_filler as ff
 
 
@@ -236,5 +233,216 @@ def run_filler_analysis_bytes(
             "pre_nms_candidates": len(rows),
             "post_nms_kept": len(kept),
             "segmentation_mode": segmentation,
+        },
+    }
+
+
+def faster_run_filler_analysis_bytes(
+    audio_bytes: bytes,
+    model,
+    segmentation: str = "adaptive",  # 'adaptive' | 'vad' | 'pydub'
+    params: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    p = params or {}
+
+    # 모델을 로드 + 피크 노멀라이즈
+    full = AudioSegment.from_file(io.BytesIO(audio_bytes))
+    gain = -1.0 - (full.max_dBFS if full.max_dBFS != float("-inf") else -1.0)
+    full = full.apply_gain(gain)
+    full = ff.ensure_format(full)
+
+    adapt = ff.compute_adaptive_params(full, frame_ms=30)
+    ctx_th = adapt["ctx_thresh"]
+
+    # 1. 전역 발화 구간
+    if segmentation == "vad":
+        speech_ivs_raw = ff.detect_speech_intervals_vad(
+            full,
+            frame_ms=p.get("vad_frame_ms", 20),  # 10/20/30 중 하나
+            aggr=p.get("vad_aggr", 2),  # 0~3 (3이 더 엄격)
+            min_speech_ms=p.get(
+                "vad_min_speech_ms", 200
+            ),  # 얼마나 잘게 쪼갤지 (200~250)
+            hangover_ms=p.get(
+                "vad_hangover_ms", 120
+            ),  # 문장 꼬리 자연스럽게 붙임 (100~200)
+            max_merge_gap_ms=p.get("vad_merge_gap_ms", 120),
+        )
+    elif segmentation == "pydub":
+        speech_ivs_raw = ff.detect_speech_intervals(full)
+    else:
+        speech_ivs_raw = ff.detect_speech_intervals_adaptive(
+            full,
+            frame_ms=p.get("adaptive_frame_ms", 30),
+            enter_margin_db=p.get("adaptive_enter_db", 6.0),
+            exit_margin_db=p.get("adaptive_exit_db", 3.0),
+            min_speech_ms=p.get("adaptive_min_speech_ms", 150),
+            min_sil_ms=p.get("adaptive_min_sil_ms", 120),
+        )
+
+    speech_iv = merge_iv(speech_ivs_raw)
+
+    # 2. 윈도윙 + 후보 필터 + 추론
+    drop = {"too_short_long": 0, "vad": 0, "context": 0, "low_prob": 0}
+    if ff.ENERGY_USE:
+        drop["energy_valley"] = 0
+    total_windows = 0
+    rows = []
+
+    for s, e in [(i.s, i.e) for i in speech_iv]:
+        for ws, we in ff.sliding_windows(s, e):
+            total_windows += 1
+            seg = ff.slice_ms(full, ws, we)
+            dur = len(seg)
+
+            if dur < ff.MIN_MS or dur > ff.MAX_MS:
+                drop["too_short_long"] += 1
+                continue
+            if ff.USE_VAD:
+                if ff.faster_vad_voiced_ratio(seg) < ff.VAD_REQ_RATIO:
+                    drop["vad"] += 1
+                    continue
+            if ff.USE_QUIET_CONTEXT and not ff.faster_is_quiet_context_adaptive(
+                full, ws, we, ctx_thresh=ctx_th
+            ):
+                drop["context"] += 1
+                continue
+            if ff.ENERGY_USE and (not ff.energy_valley_ok(full, ws, we)):
+                drop["energy_valley"] += 1
+                continue
+
+            x = ff.extract_x(seg)
+            p0 = float(model.predict(x, verbose=0)[0][ff.FILLER_IDX])
+
+            if p0 >= ff.THR:
+                rows.append({"s": ws, "e": we, "dur_ms": dur, "p": round(p0, 6)})
+            else:
+                drop["low_prob"] += 1
+
+    # 3. neighbor merge
+    def _has_support(c, pool) -> bool:
+        for d in pool:
+            if d is c:
+                continue
+            if (
+                ff.iou((c["s"], c["e"]), (d["s"], d["e"])) >= ff.NEIGHBOR_IOU_MIN
+                and d["p"] >= ff.NEIGHBOR_SUPPORT_THR
+            ):
+                return True
+        return False
+
+    cands = rows
+    tmp = []
+    for c in cands:
+        if c["p"] >= ff.STRICT_PASS or _has_support(c, cands):
+            tmp.append(c)
+    cands = tmp
+    cands = sorted(cands, key=lambda r: r["p"], reverse=True)
+    kept = []
+    for c in cands:
+        if all(ff.iou((c["s"], c["e"]), (k["s"], k["e"])) < ff.NMS_IOU for k in kept):
+            kept.append(c)
+
+    def _merge_kept(kept: list[dict], max_gap: int = 80) -> list[dict]:
+        if not kept:
+            return kept
+        kept = sorted(kept, key=lambda r: (r["s"], r["e"]))
+        out = [dict(kept[0])]
+        for c in kept[1:]:
+            last = out[-1]
+            # 겹치거나, gap이 max_gap 이하이면 합치기
+            if c["s"] <= last["e"] + max_gap:
+                last["e"] = max(last["e"], c["e"])
+                last["dur_ms"] = last["e"] - last["s"]
+                last["p"] = max(last["p"], c["p"])  # 최고 확률 유지
+            else:
+                out.append(dict(c))
+        return out
+
+    kept = _merge_kept(kept, max_gap=80)
+    filler_iv = merge_iv([(r["s"], r["e"]) for r in kept])
+
+    # 4. 집계
+    T = len(full)
+
+    speech_ms = sum_iv(speech_iv)
+    filler_ms = sum_iv(filler_iv)
+    speech_wo_filler_iv = subtract_iv(speech_iv, filler_iv)  # speech - filler
+    speech_wo_filler_ms = sum_iv(speech_wo_filler_iv)
+    silence_iv = complement_iv(speech_iv, T)
+    silence_ms = sum_iv(silence_iv)
+
+    # 추가 지표
+    # 긴 침묵
+    LONG_PAUSE_MS = 1500
+    long_pauses = [iv for iv in silence_iv if (iv.e - iv.s) >= LONG_PAUSE_MS]
+    long_pauses_count = len(long_pauses)
+    longest_pause_ms = max((iv.e - iv.s) for iv in long_pauses) if long_pauses else 0
+    long_pauses_per_min = (long_pauses_count / (T / 60000)) if T > 0 else 0.0
+
+    def _overlap_ms(iv, seg):
+        return max(0, min(iv.e, seg[1]) - max(iv.s, seg[0]))
+
+    # 침묵 분포 (3등분)
+    thirds = [(0, T // 3), (T // 3, 2 * T // 3), (2 * T // 3, T)]
+    head = sum(_overlap_ms(iv, thirds[0]) for iv in silence_iv)
+    body = sum(_overlap_ms(iv, thirds[1]) for iv in silence_iv)
+    tail = sum(_overlap_ms(iv, thirds[2]) for iv in silence_iv)
+    pause_distribution = {
+        "head": head / 1000.0,
+        "body": body / 1000.0,
+        "tail": tail / 1000.0,
+    }
+
+    phrase_durs = [i.e - i.s for i in speech_iv]
+    avg_phrase_sec = (float(np.mean(phrase_durs)) / 1000.0) if phrase_durs else 0.0
+    phrase_len_sd = (float(np.std(phrase_durs)) / 1000.0) if phrase_durs else 0.0
+
+    fillers_per_min = (len(filler_iv) / (T / 60000)) if T > 0 else 0.0
+    speech_density = (speech_wo_filler_ms / T) if T > 0 else 0.0
+
+    silence_per_duration = (silence_ms / T) if T > 0 else 0.0
+    silence_per_speech = (silence_ms / speech_ms) if speech_ms > 0 else 0.0
+    sil_plus_filler_per_speech_wo_filler = (
+        ((silence_ms + filler_ms) / speech_wo_filler_ms)
+        if speech_wo_filler_ms > 0
+        else None
+    )
+
+    return {
+        "duration_ms": T,
+        "speech_ms": speech_ms,
+        "silence_ms": silence_ms,
+        "filler_ms": filler_ms,
+        "speech_wo_filler_ms": speech_wo_filler_ms,
+        "ratios": {
+            "silence_per_duration": silence_per_duration,
+            "silence_per_speech": silence_per_speech,
+            "silence_plus_filler_per_speech_wo_filler": sil_plus_filler_per_speech_wo_filler,
+            "filler_ratio": (filler_ms / speech_ms) if speech_ms > 0 else 0.0,
+            "speech_density": speech_density,
+        },
+        "fluency": {"fillers_per_min": fillers_per_min},
+        "pause_hygiene": {
+            "long_pauses_count": long_pauses_count,
+            "longest_pause_ms": longest_pause_ms,
+            "long_pauses_per_min": long_pauses_per_min,
+            "pause_distribution": pause_distribution,
+            "avg_phrase_sec": avg_phrase_sec,
+            "phrase_len_sd": phrase_len_sd,
+        },
+        "intervals": {
+            "speech": [{"s": i.s, "e": i.e} for i in speech_iv],
+            "filler": [{"s": i.s, "e": i.e} for i in filler_iv],
+            "silence": [{"s": i.s, "e": i.e} for i in silence_iv],
+            "speech_wo_filler": [{"s": i.s, "e": i.e} for i in speech_wo_filler_iv],
+        },
+        "diag": {
+            "total_windows": total_windows,
+            "drops": drop,
+            "pre_nms_candidates": len(rows),
+            "post_nms_kept": len(kept),
+            "segmentation_mode": segmentation,
+            "gain_db": gain,
         },
     }

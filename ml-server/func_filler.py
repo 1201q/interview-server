@@ -48,6 +48,8 @@ ENERGY_CENTER_MS = 160  # 윈도우 중앙부 길이
 ENERGY_EDGE_MS = 80  # 앞/뒤 비교 구간 길이
 ENERGY_MARGIN_DB = 2.0  # 중앙이 앞/뒤보다 최소 이만큼 커야 통과
 
+_vad = webrtcvad.Vad(VAD_AGGR)
+
 
 def ensure_format(seg: AudioSegment) -> AudioSegment:
     return (
@@ -298,6 +300,28 @@ def vad_voiced_ratio(seg: AudioSegment) -> float:
     return (voiced / total) if total else 0.0
 
 
+def faster_vad_voiced_ratio(seg: AudioSegment, vad=_vad) -> float:
+    """% of voiced frames by WebRTC VAD"""
+    pcm = audio_to_pcm16(seg)
+    bytes_per_sample = 2
+    sample_rate = TARGET_SR
+    frame_len = int(sample_rate * VAD_FRAME_MS / 1000)  # samples
+    step_bytes = frame_len * bytes_per_sample
+
+    total = 0
+    voiced = 0
+    for i in range(0, len(pcm) - step_bytes + 1, step_bytes):
+        frame = pcm[i : i + step_bytes]
+        total += 1
+        try:
+            if vad.is_speech(frame, sample_rate):
+                voiced += 1
+        except Exception:
+            # ignore malformed last chunk
+            pass
+    return (voiced / total) if total else 0.0
+
+
 def is_quiet_context_adaptive(
     full: AudioSegment, s: int, e: int, pre_ms: int = 150, post_ms: int = 150
 ):
@@ -309,6 +333,28 @@ def is_quiet_context_adaptive(
     def quiet(seg):
         db = seg.dBFS if seg.dBFS != float("-inf") else -100.0
         return db <= ctx_th
+
+    # 앞/뒤 둘 중 하나만 조용해도 인정하고 싶으면 or, 둘 다면 and
+    return quiet(pre) or quiet(post)
+
+
+def faster_is_quiet_context_adaptive(
+    full: AudioSegment,
+    s: int,
+    e: int,
+    pre_ms: int = 150,
+    post_ms: int = 150,
+    ctx_thresh=None,
+):
+    if ctx_thresh is None:
+        ctx_thresh = compute_adaptive_params(full, frame_ms=30)["ctx_thresh"]
+
+    pre = full[max(0, s - pre_ms) : s]
+    post = full[e : min(len(full), e + post_ms)]
+
+    def quiet(seg):
+        db = seg.dBFS if seg.dBFS != float("-inf") else -100.0
+        return db <= ctx_thresh
 
     # 앞/뒤 둘 중 하나만 조용해도 인정하고 싶으면 or, 둘 다면 and
     return quiet(pre) or quiet(post)

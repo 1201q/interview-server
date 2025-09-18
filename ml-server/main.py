@@ -6,7 +6,7 @@ from urllib.parse import urljoin
 from convert import *
 
 from io import BytesIO
-from core_filler import run_filler_analysis_bytes
+from core_filler import faster_run_filler_analysis_bytes
 
 from functools import lru_cache
 import tensorflow as tf
@@ -98,7 +98,7 @@ def voice_metrics():
     model = load_filler_model(model_path)
 
     try:
-        result = run_filler_analysis_bytes(
+        result = faster_run_filler_analysis_bytes(
             audio_bytes=wav_bytes,
             model=model,
             segmentation=segmentation,

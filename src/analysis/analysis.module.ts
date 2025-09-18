@@ -13,12 +13,14 @@ import { SttWorker } from "./workers/stt.worker";
 import { RefineWorker } from "./workers/refine.worker";
 import { FeedbackWorker } from "./workers/feedback.worker";
 import { AudioWorker } from "./workers/audio.worker";
+import { OciDBService } from "src/external-server/oci-db.service";
 
 @Module({
   imports: [AuthModule, ExternalServerModule, QueueModule],
   controllers: [AnalysisController, AudioCallbackController],
   providers: [
     AnalysisService,
+    OciDBService,
     AnswerAnalysisRepository,
     GateService,
     AnalysisOrchestratorService,
