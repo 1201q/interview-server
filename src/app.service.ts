@@ -30,7 +30,7 @@ export class AppService {
   }
 
   async testRedis() {
-    await this.redis.set("test", "hello redis!!!!!!!!");
+    await this.redis.set("test", "hello redis!!!!!!!");
 
     const value = await this.redis.get("test");
 

@@ -20,7 +20,7 @@ from pathlib import Path
 from redis import Redis
 from rq import Queue
 
-
+# 환경변수 로드
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
 BASE_DIR = Path(__file__).resolve().parent
