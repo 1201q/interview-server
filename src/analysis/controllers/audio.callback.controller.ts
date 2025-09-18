@@ -6,7 +6,7 @@ import { GateService } from "../services/gate.service";
 import { OciDBService } from "src/external-server/oci-db.service";
 
 @ApiTags("오디오 분석 콜백")
-@Controller("analyze/audio")
+@Controller("analysis/audio")
 export class AudioCallbackController {
   constructor(
     private readonly aaRepo: AnswerAnalysisRepository,

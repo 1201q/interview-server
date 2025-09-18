@@ -47,4 +47,28 @@ export class AnalysisOrchestratorService {
 
     return { analysisId };
   }
+
+  async startAudioOnly(input: { answerId: string; objectName: string }) {
+    const { answerId, objectName } = input;
+
+    // answerAnal
+    const aa = await this.aaRepo.ensureOne(answerId);
+
+    console.log(aa);
+
+    await this.audioQ.add(
+      "audio",
+      {
+        analysisId: aa.id,
+        answerId,
+        objectName,
+      },
+      {
+        jobId: `audio:${aa.id}`,
+        attempts: 3,
+        backoff: { type: "exponential", delay: 2000 },
+        removeOnComplete: 1000,
+      },
+    );
+  }
 }

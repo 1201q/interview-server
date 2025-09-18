@@ -12,3 +12,5 @@ soundfile
 pymupdf
 pymupdf4llm
 pyloudnorm
+redis==5.0.1
+rq==1.15.1

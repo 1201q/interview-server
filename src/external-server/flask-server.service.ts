@@ -74,6 +74,23 @@ export class FlaskServerService {
     return { result: this.tidyText(result), fallback: fallback };
   }
 
+  async enqueueAudioJob(dto: {
+    analysisId: string;
+    answerId: string;
+    objectName: string;
+    audioUrl: string;
+  }) {
+    const baseUrl = this.configService.get<string>("ML_SERVER_URL");
+
+    await fetch(`${baseUrl}/enqueue_audio`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(dto),
+    });
+
+    return { enqueued: true };
+  }
+
   tidyText(input: string) {
     let s = input.replace(/\r\n/g, "\n"); // CRLF → LF 통일
 

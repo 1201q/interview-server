@@ -73,14 +73,15 @@ jobs:
             cd /home/ubuntu/interview
             echo "PY_TEST=${{ secrets.PY_TEST }}" >> .env
 
-            docker-compose stop ml-server
-            docker-compose rm -f ml-server
+            docker-compose stop ml-server ml-worker || true
+            docker-compose rm -f ml-server ml-worker || true
+
             docker system prune -af
 
             echo "📦 ML 이미지 pull"
-            docker-compose pull ml-server
+            docker-compose pull ml-server ml-worker
 
             echo "🚀 ML 서버 재시작"
-            docker-compose up -d --build ml-server
+            docker-compose up -d --build ml-server ml-worker
 
             echo "✅ ML 서버 배포 완료!"

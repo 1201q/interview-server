@@ -17,6 +17,9 @@ import pymupdf4llm
 import traceback
 from pathlib import Path
 
+from redis import Redis
+from rq import Queue
+
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
@@ -24,10 +27,10 @@ BASE_DIR = Path(__file__).resolve().parent
 
 app = Flask(__name__)
 NEST_URL = os.getenv("NEST_URL", "http://localhost:8000")
-webhook_url = urljoin(NEST_URL, "/analysis/webhook")
+callback_url = urljoin(NEST_URL, "/analysis/audio/callback")
 
+# model
 DEFAULT_MODEL = BASE_DIR / "model" / "new_filler_determine_model.h5"
-
 model_path = str(DEFAULT_MODEL)
 
 
