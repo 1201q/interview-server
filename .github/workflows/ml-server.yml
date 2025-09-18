@@ -9,26 +9,23 @@ on:
 
 jobs:
   build-and-push-ml:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3 # 최신
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and Push ML Image
-        uses: docker/build-push-action@v5
+      - name: Build and Push ML Image (ARM native)
+        uses: docker/build-push-action@v6 # 최신
         with:
           context: ./ml-server
           file: ./ml-server/Dockerfile
@@ -37,10 +34,9 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/ml-server:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/ml-server:arm64
-          build-args: |
-            BUILDKIT_INLINE_CACHE=1
-          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/ml-server:cache
-          cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/ml-server:cache,mode=max
+          cache-from: type=gha # GHA 캐시로 전환
+          cache-to: type=gha,mode=max
+          provenance: false #  이미지 메타데이터 생략해 약간 단축
 
   deploy:
     runs-on: ubuntu-latest
