@@ -1,27 +1,27 @@
 FROM mambaorg/micromamba:1.4.3 AS builder
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-
-RUN micromamba create -n ml-env \
-    -c conda-forge \        
-    --strict-channel-priority \        
-    python=3.10 \
-    pip \
-    flask \
-    gunicorn \
-    python-dotenv \
-    requests \
-    ffmpeg \
-    libsndfile \
-    soxr \
-    -y && \
-    micromamba clean --all --yes
-
 WORKDIR /app
+
+# conda/pip 캐시 경로 고정
+ENV PIP_CACHE_DIR=/opt/pipcache
+
 COPY requirements.txt .
 
-# 📦 pip 캐시를 BuildKit cache로 유지해서 재빌드 가속
-RUN --mount=type=cache,id=pip-ml-env,target=/home/mambauser/.cache/pip \
-    micromamba run -n ml-env pip install -r requirements.txt
+# conda 환경 생성 (conda pkgs 캐시)
+RUN --mount=type=cache,target=/opt/conda/pkgs \
+    micromamba create -n ml-env -c conda-forge --strict-channel-priority \
+    python=3.10 pip flask gunicorn python-dotenv requests ffmpeg libsndfile soxr -y
+
+# wheel 미리 다운로드 (pip 캐시 + wheel 폴더 캐시)
+RUN --mount=type=cache,target=/opt/conda/pkgs \
+    --mount=type=cache,target=/opt/pipcache \
+    --mount=type=cache,target=/wheels \
+    micromamba run -n ml-env pip wheel -r requirements.txt -w /wheels
+
+# wheel로 설치
+RUN --mount=type=cache,target=/opt/conda/pkgs \
+    --mount=type=cache,target=/opt/pipcache \
+    micromamba run -n ml-env pip install --no-index --find-links=/wheels -r requirements.txt
 
 COPY . .
 
@@ -29,7 +29,6 @@ COPY . .
 FROM python:3.10-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
-
 WORKDIR /app
 
 

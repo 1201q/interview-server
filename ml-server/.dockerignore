@@ -1,0 +1,13 @@
+.git
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+*.tmp
+.venv/
+env/
+build/
+dist/
+.wheels/
+data/
