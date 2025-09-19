@@ -21,4 +21,4 @@ redis==5.0.1
 rq==1.15.1
 gunicorn
 python-dotenv
-
+flask
