@@ -34,9 +34,11 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/ml-server:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/ml-server:arm64
-          cache-from: type=gha,scope=ml-server
+          cache-from: |
+            type=gha,scope=ml-server
             type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/ml-server:buildcache
-          cache-to: type=gha,mode=max,scope=ml-server
+          cache-to: |
+            type=gha,mode=max,scope=ml-server
             type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/ml-server:buildcache,mode=max
           provenance: false #  이미지 메타데이터 생략해 약간 단축
 

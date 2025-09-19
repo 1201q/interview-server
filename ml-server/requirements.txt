@@ -1,16 +1,22 @@
+# --- Core ML ---
 tensorflow==2.17.0
 numpy==1.26.4
 scipy==1.11.4
+
+# librosa가 꼭 필요하면 유지 (numba/llvmlite 포함 → 용량↑)
 librosa==0.10.1
 webrtcvad-wheels==2.0.14
 
+# --- I/O & utils ---
 openai==1.82.0
-pdfplumber
 pydub
 ffmpeg-python
 soundfile
+pyloudnorm
 pymupdf
 pymupdf4llm
-pyloudnorm
+
+# --- Infra ---
 redis==5.0.1
 rq==1.15.1
+
