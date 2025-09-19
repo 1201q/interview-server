@@ -70,7 +70,7 @@ services:
       - TZ=Asia/Seoul
     env_file:
       - .env
-    command: ["/opt/conda/envs/ml-env/bin/rq", "worker", "-u", "${RQ_REDIS_URL}", "audio"]
+    command: sh -lc 'rq worker -u "$RQ_REDIS_URL" audio'
     platform: linux/arm64
 
 networks:
