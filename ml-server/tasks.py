@@ -16,6 +16,7 @@ from functools import lru_cache
 import tensorflow as tf
 from pathlib import Path
 
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 

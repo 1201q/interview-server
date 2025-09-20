@@ -71,7 +71,7 @@ services:
       - TZ=Asia/Seoul
     env_file:
       - .env
-    command: sh -lc 'rq worker -u "$RQ_REDIS_URL" audio'
+    command: sh -lc 'rq worker -u "$RQ_REDIS_URL" -S pickle audio'
     platform: linux/arm64
 
 networks:
