@@ -71,7 +71,8 @@ services:
       - TZ=Asia/Seoul
     env_file:
       - .env
-    command: sh -lc 'unset RQ_WORKER_ARGS RQ_SERIALIZER; rq worker -u "$RQ_REDIS_URL" audio'
+    entrypoint: []
+    command: ["python","-m","rq.cli","worker","-u","redis://redis:6379/1","audio"]
     platform: linux/arm64
 
 networks:

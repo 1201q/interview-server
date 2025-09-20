@@ -23,14 +23,14 @@ from rq import Queue
 from tasks import analyze_voice
 
 
-# 환경변수 로드
+# 최초 환경변수 로드
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
 BASE_DIR = Path(__file__).resolve().parent
 
 app = Flask(__name__)
 NEST_URL = os.getenv("NEST_URL", "http://localhost:8000")
-callback_url = urljoin(NEST_URL, "/analysis/audio/callback")
+
 
 # model
 DEFAULT_MODEL = BASE_DIR / "model" / "new_filler_determine_model.h5"
