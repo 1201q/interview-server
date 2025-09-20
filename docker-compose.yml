@@ -71,7 +71,7 @@ services:
       - TZ=Asia/Seoul
     env_file:
       - .env
-    command: sh -lc 'rq worker -u "$RQ_REDIS_URL" -S pickle audio'
+    command: sh -lc 'unset RQ_WORKER_ARGS RQ_SERIALIZER; rq worker -u "$RQ_REDIS_URL" audio'
     platform: linux/arm64
 
 networks:
