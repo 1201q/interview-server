@@ -12,6 +12,7 @@ services:
     env_file:
       - .env
     environment:
+      - NEST_URL=http://interview:8000
       - ML_SERVER_URL=http://ml-server:5000
       - BULL_REDIS_URL=redis://redis:6379/0
       - TZ=Asia/Seoul

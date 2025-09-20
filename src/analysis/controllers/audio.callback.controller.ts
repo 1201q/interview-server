@@ -15,11 +15,13 @@ export class AudioCallbackController {
   ) {}
 
   @Post("/callback")
-  async onAudioDone(@Body() payload: { analysisId: string; voiceJson: any }) {
-    await this.aaRepo.upsertJson(payload.analysisId, {
-      voice_json: payload.voiceJson,
-    });
-    await this.gate.tryComplete(payload.analysisId);
+  async onAudioDone(@Body() payload: { analysisId: string; result: any }) {
+    // await this.aaRepo.upsertJson(payload.analysisId, {
+    //   voice_json: payload.voiceJson,
+    // });
+    // await this.gate.tryComplete(payload.analysisId);
+
+    console.log(payload);
 
     return { status: "success" };
   }

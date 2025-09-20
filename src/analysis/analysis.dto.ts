@@ -72,3 +72,13 @@ export class STTRefineDto {
   @IsNotEmpty()
   words: string[];
 }
+
+export class VoiceAnalysisQueueDto {
+  @ApiProperty({ description: "object name", required: true })
+  @IsString()
+  objectName: string;
+
+  @ApiProperty({ description: "analysisId", required: true })
+  @IsString()
+  analysisId: string;
+}

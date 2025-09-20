@@ -4,12 +4,14 @@ import { ConfigService } from "@nestjs/config";
 import * as FormData from "form-data";
 import { lastValueFrom } from "rxjs";
 import { Readable } from "stream";
+import { OciDBService } from "./oci-db.service";
 
 @Injectable()
 export class FlaskServerService {
   constructor(
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
+    private readonly oci: OciDBService,
   ) {}
 
   async convertToSeekableWebm(webm: Express.Multer.File) {
@@ -74,19 +76,26 @@ export class FlaskServerService {
     return { result: this.tidyText(result), fallback: fallback };
   }
 
-  async enqueueAudioJob(dto: {
-    analysisId: string;
-    answerId: string;
-    objectName: string;
-    audioUrl: string;
-  }) {
+  async enqueueAudioJob(dto: { analysisId: string; objectName: string }) {
     const baseUrl = this.configService.get<string>("ML_SERVER_URL");
 
-    await fetch(`${baseUrl}/enqueue_audio`, {
+    const audioUrl = await this.oci.generatePresignedUrl(dto.objectName);
+
+    const body = {
+      analysis_id: dto.analysisId,
+      audio_url: audioUrl,
+      callback_url: `${this.configService.get<string>("NEST_URL")}/analysis/audio/callback`,
+    };
+
+    const res = await fetch(`${baseUrl}/audio/enqueue`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(dto),
+      body: JSON.stringify(body),
     });
+
+    if (!res.ok) {
+      throw new Error(`Failed to enqueue audio job: ${res.statusText}`);
+    }
 
     return { enqueued: true };
   }

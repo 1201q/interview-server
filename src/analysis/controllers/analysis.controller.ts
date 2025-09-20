@@ -10,7 +10,12 @@ import {
   UseInterceptors,
 } from "@nestjs/common";
 import { ApiConsumes, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { EvalRequestDto, STTRequestDto, UploadAudioDto } from "../analysis.dto";
+import {
+  EvalRequestDto,
+  STTRequestDto,
+  UploadAudioDto,
+  VoiceAnalysisQueueDto,
+} from "../analysis.dto";
 import { AnalysisService } from "../services/analysis.service";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { FlaskServerService } from "src/external-server/flask-server.service";
@@ -90,5 +95,18 @@ export class AnalysisController {
   @Get("/test/:answerId")
   async test(@Param("answerId") answerId: string) {
     return this.orchestrator.start(answerId);
+  }
+
+  @Post("/voice/queue/test")
+  @ApiOperation({
+    summary: "음성 분석 큐 테스트",
+  })
+  async analVoice(
+    @Body() dto: VoiceAnalysisQueueDto,
+    @Query("test") mode: boolean = true,
+  ) {
+    const res = await this.flaskService.enqueueAudioJob(dto);
+
+    return res;
   }
 }
