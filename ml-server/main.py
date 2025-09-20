@@ -22,7 +22,7 @@ from rq import Queue
 
 from tasks import analyze_voice
 
-from rq.serializers import PickleSerializer
+from rq.serializers import DefaultSerializer
 
 
 # 환경변수 로드
@@ -41,7 +41,7 @@ model_path = str(DEFAULT_MODEL)
 # 큐
 RQ_URL = os.getenv("RQ_REDIS_URL", "redis://localhost:6379/1")
 redis_conn = Redis.from_url(RQ_URL)
-q_audio = Queue("audio", connection=redis_conn, serializer=PickleSerializer())
+q_audio = Queue("audio", connection=redis_conn, serializer=DefaultSerializer())
 
 
 @lru_cache(maxsize=2)
