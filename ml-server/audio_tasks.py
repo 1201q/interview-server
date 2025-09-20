@@ -1,10 +1,8 @@
 # tasks.py
-import os
 import io
 import time
 import json
 import logging
-import tempfile
 from typing import Optional, Dict, Any
 import requests
 

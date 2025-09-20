@@ -6,7 +6,7 @@ from rq.worker import SimpleWorker
 
 REDIS_URL = os.getenv("RQ_REDIS_URL", "redis://localhost:6379/1")
 
-import tasks
+import audio_tasks as audio_tasks
 
 
 def main():

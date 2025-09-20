@@ -1,11 +1,13 @@
+import subprocess
 from flask import Flask, request, jsonify, send_file
 from dotenv import load_dotenv
 import os, tempfile
 from werkzeug.utils import secure_filename
 from urllib.parse import urljoin
-from convert import *
+
 
 from io import BytesIO
+from convert import convert_to_seekable_webm, webm_to_wav_bytes
 from core_filler import faster_run_filler_analysis_bytes
 
 from functools import lru_cache
@@ -20,7 +22,7 @@ from pathlib import Path
 from redis import Redis
 from rq import Queue
 
-from tasks import analyze_voice
+from audio_tasks import analyze_voice
 
 
 # 최초 환경변수 로드
@@ -124,7 +126,7 @@ def voice_metrics():
         wav_bytes = _ensure_wav(audio_bytes, mimetype)
     except Exception as e:
         app.logger.exception("webm 변환 실패")
-        return jsonify({"error": "webm→wav 변환 실패", "msg": str(e)}), 500
+        return jsonify({"error": "webm→wav 변환 실패", "message": str(e)}), 500
 
     segmentation = request.args.get("segmentation", "adaptive")
 
@@ -145,7 +147,7 @@ def voice_metrics():
         return jsonify(result)
     except Exception as e:
         app.logger.exception("voice_metrics error")
-        return jsonify({"error": "서버 내부 오류", "msg": str(e)}), 500
+        return jsonify({"error": "서버 내부 오류", "message": str(e)}), 500
 
 
 # webm -> seekable webm으로 변환
@@ -172,9 +174,9 @@ def convert_seekable():
             return send_file(data, mimetype="audio/webm", as_attachment=False)
 
         except subprocess.CalledProcessError as e:
-            return jsonify({"error": "변환 실패", "msg": str(e)}), 500
+            return jsonify({"error": "변환 실패", "message": str(e)}), 500
         except Exception as e:
-            return jsonify({"error": "서버 내부 오류", "msg": str(e)}), 500
+            return jsonify({"error": "서버 내부 오류", "message": str(e)}), 500
 
 
 # pdf에서 텍스트 추출
