@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify, send_file
 from dotenv import load_dotenv
 import os, tempfile
-from sympy import EX
 from werkzeug.utils import secure_filename
 from urllib.parse import urljoin
 from convert import *
