@@ -23,3 +23,14 @@ export class GenerateResponseDto {
   })
   status: "completed" | "failed";
 }
+
+export class GQRequestResponseDto {
+  @ApiProperty({ description: "생성 요청 ID", type: String })
+  id: string;
+
+  @ApiProperty({
+    description: "상태",
+    enum: ["pending", "working", "completed", "failed"],
+  })
+  status: "pending" | "working" | "completed" | "failed";
+}

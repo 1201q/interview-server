@@ -25,6 +25,7 @@ import { GenerateQuestionService } from "./generate-question.service";
 import {
   CreateQuestionRequestDto,
   GenerateResponseDto,
+  GQRequestResponseDto,
 } from "./generate-question.dto";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { FlaskServerService } from "../external-server/flask-server.service";
@@ -88,12 +89,20 @@ export class GenerateQuestionController {
     }
   }
 
-  @Get(":id")
+  @Get(":id/questions")
   @ApiOperation({ summary: "생성된 질문 목록 조회" })
   @ApiParam({ name: "id", description: "GenerateRequest id" })
   @ApiResponse({ status: HttpStatus.OK, description: "생성된 질문들 반환" })
   async getGenerated(@Param("id") id: string) {
     return this.generateService.getQuestions(id);
+  }
+
+  @Get(":id/request")
+  @ApiOperation({ summary: "request 조회" })
+  @ApiParam({ name: "id", description: "GenerateRequest id" })
+  @ApiResponse({ status: HttpStatus.OK, description: "request 반환" })
+  async getRequest(@Param("id") id: string): Promise<GQRequestResponseDto> {
+    return this.generateService.getRequest(id);
   }
 
   @Post("extract")

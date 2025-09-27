@@ -14,6 +14,7 @@ import { Question, GenerateRequest } from "../common/entities/entities";
 import {
   CreateQuestionRequestDto,
   GenerateResponseDto,
+  GQRequestResponseDto,
 } from "./generate-question.dto";
 import OpenAI from "openai";
 import { ConfigService } from "@nestjs/config";
@@ -36,6 +37,13 @@ import { chain } from "stream-chain";
 import { parser } from "stream-json";
 import { pick } from "stream-json/filters/Pick";
 import { streamArray } from "stream-json/streamers/StreamArray";
+
+type WriteEventOpts = {
+  id?: string | number;
+  event?: string;
+  data?: any;
+  retryMs?: number;
+};
 
 @Injectable()
 export class GenerateQuestionService {
@@ -151,6 +159,18 @@ export class GenerateQuestionService {
     return { status: "ok", questions: result };
   }
 
+  async getRequest(id: string): Promise<GQRequestResponseDto> {
+    const request = await this.requestRepo.findOne({
+      where: { id },
+    });
+
+    if (!request) {
+      throw new NotFoundException("해당 id의 생성 요청이 없습니다.");
+    }
+
+    return { id: request.id, status: request.status };
+  }
+
   async questionGenerator(resume: string, job: string) {
     const prompt_text = QuestionGeneratorPrompt(resume, job);
 
@@ -184,16 +204,18 @@ export class GenerateQuestionService {
       where: { id: requestId },
     });
 
-    const heartbeat = setInterval(() => res.write(":hb\n\n"), 15000);
     let closed = false;
-
     const safeEnd = () => {
       if (!closed) {
         closed = true;
         clearInterval(heartbeat);
-        res.end();
+        if (!res.writableEnded) res.end();
       }
     };
+
+    const heartbeat = this.startHeartbeat(res);
+
+    this.writeEvent(res, { retryMs: 1000 });
 
     requestEntity.status = "working";
     await this.requestRepo.save(requestEntity);
@@ -217,6 +239,9 @@ export class GenerateQuestionService {
       streamArray(),
     ]);
 
+    let eid = 0;
+    const nextId = () => ++eid;
+
     pipeline.on("data", ({ value }) => {
       try {
         const item = QuestionItem.parse(value);
@@ -225,21 +250,27 @@ export class GenerateQuestionService {
 
         console.log(item);
 
-        res.write(`event: question\ndata: ${JSON.stringify(item)}\n\n`);
-        res.write(
-          `event: progress\ndata:${JSON.stringify({ limitCount, createdTotal })}\n\n`,
-        );
+        this.writeEvent(res, { id: nextId(), event: "question", data: item });
+        this.writeEvent(res, {
+          id: nextId(),
+          event: "progress",
+          data: { limitCount, createdTotal },
+        });
       } catch (error) {
-        res.write(
-          `event: warn\ndata:${JSON.stringify({ reason: "schema_invalid" })}\n\n`,
-        );
+        this.writeEvent(res, {
+          id: nextId(),
+          event: "warn",
+          data: { reason: "schema_invalid" },
+        });
       }
     });
 
     pipeline.on("end", async () => {
-      res.write(
-        `event: progress\ndata:${JSON.stringify({ limitCount, createdTotal })}\n\n`,
-      );
+      this.writeEvent(res, {
+        id: nextId(),
+        event: "progress",
+        data: { limitCount, createdTotal },
+      });
 
       // db 반영
       try {
@@ -261,12 +292,14 @@ export class GenerateQuestionService {
         requestEntity.status = "completed";
         await this.requestRepo.save(requestEntity);
 
-        res.write("event: done\ndata: [DONE]\n\n");
+        this.writeEvent(res, { id: nextId(), event: "done", data: "[DONE]" });
       } catch (error) {
         if (!res.writableEnded) {
-          res.write(
-            `event: failed\ndata:${JSON.stringify({ reason: "db_error", msg: String(error) })}\n\n`,
-          );
+          this.writeEvent(res, {
+            id: nextId(),
+            event: "failed",
+            data: { reason: "db_error", msg: String(error) },
+          });
         }
 
         console.error("DB error:", error);
@@ -280,9 +313,11 @@ export class GenerateQuestionService {
 
     pipeline.on("error", (error) => {
       if (!res.writableEnded) {
-        res.write(
-          `event: failed\ndata:${JSON.stringify({ reason: "parse_error", msg: String(error) })}\n\n`,
-        );
+        this.writeEvent(res, {
+          id: nextId(),
+          event: "failed",
+          data: { reason: "parse_error", msg: String(error) },
+        });
       }
       safeEnd();
     });
@@ -321,13 +356,50 @@ export class GenerateQuestionService {
   }
 
   async streamMockData(res: Response) {
-    for (const q of MOCK_QUESTIONS) {
-      res.write(`event: question\ndata: ${JSON.stringify(q)}\n\n`);
-      await new Promise((r) => setTimeout(r, 500));
-    }
+    await new Promise((r) => setTimeout(r, 3000));
 
-    res.write("event: done\ndata: [DONE]\n\n");
-    return res.end();
+    const heartbeat = this.startHeartbeat(res, 15000);
+
+    let closed = false;
+    const safeEnd = () => {
+      if (!closed) {
+        closed = true;
+        clearInterval(heartbeat);
+        if (!res.writableEnded) res.end();
+      }
+    };
+
+    this.writeEvent(res, { retryMs: 1000 });
+
+    let eid = 0;
+    const nextId = () => ++eid;
+
+    const limitCount = 5;
+
+    try {
+      for (let i = 0; i < limitCount; i++) {
+        const item = MOCK_QUESTIONS[i];
+
+        this.writeEvent(res, { id: nextId(), event: "question", data: item });
+        this.writeEvent(res, {
+          id: nextId(),
+          event: "progress",
+          data: { limitCount, createdTotal: i + 1 },
+        });
+
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+
+      this.writeEvent(res, { id: nextId(), event: "done", data: "[DONE]" });
+    } catch (e) {
+      this.writeEvent(res, {
+        id: nextId(),
+        event: "failed",
+        data: { reason: "mock_error", msg: String(e) },
+      });
+    } finally {
+      safeEnd();
+    }
   }
 
   // new
@@ -376,5 +448,28 @@ export class GenerateQuestionService {
     });
 
     return resultDto;
+  }
+
+  writeEvent(res: Response, { id, event, data, retryMs }: WriteEventOpts) {
+    if (res.writableEnded) return;
+
+    if (retryMs != null) res.write(`retry: ${retryMs}\n`);
+
+    if (id != null) res.write(`id: ${id}\n`);
+
+    if (event) res.write(`event: ${event}\n`);
+
+    if (data !== undefined) {
+      const payload = typeof data === "string" ? data : JSON.stringify(data);
+      res.write(`data: ${payload}\n\n`);
+    } else {
+      res.write(`\n`);
+    }
+  }
+
+  startHeartbeat(res: Response, ms = 15000) {
+    return setInterval(() => {
+      if (!res.writableEnded) res.write(`:hb ${Date.now()}\n\n`);
+    }, ms);
   }
 }
