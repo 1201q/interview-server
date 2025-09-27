@@ -67,8 +67,6 @@ export class TranscribeController {
     const session =
       await this.transcribeService.testcreateRealtimeSession(context);
 
-    console.log(session);
-
     return session;
   }
 
