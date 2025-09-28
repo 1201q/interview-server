@@ -8,7 +8,9 @@ import { computeScores } from "src/common/utils/scoring";
 import { Readable } from "stream";
 import { BuildSttRefinePrompt } from "src/common/prompts/stt-refine-prompt";
 import z from "zod";
-import { DataSource } from "typeorm";
+import { DataSource, Repository } from "typeorm";
+import { InterviewSession } from "src/common/entities/entities";
+import { InjectRepository } from "@nestjs/typeorm";
 
 @Injectable()
 export class AnalysisService {
@@ -17,6 +19,9 @@ export class AnalysisService {
   constructor(
     private readonly configService: ConfigService,
     private readonly dataSource: DataSource,
+
+    @InjectRepository(InterviewSession)
+    private readonly sessionRepo: Repository<InterviewSession>,
   ) {
     this.openai = new OpenAI({
       apiKey: this.configService.get("OPENAI_API_KEY"),
@@ -91,5 +96,34 @@ export class AnalysisService {
         return corrected as string[];
       } catch (error) {}
     } catch (error) {}
+  }
+
+  async getAnalysis(sessionId: string) {
+    const session = await this.sessionRepo.findOne({
+      where: { id: sessionId },
+      relations: [
+        "session_questions.question",
+        "session_questions.answers.analyses",
+      ],
+    });
+
+    const result = session.session_questions.map((sq) => {
+      return {
+        text: sq.question.text,
+        section: sq.question.section,
+        id: sq.id,
+        order: sq.order,
+        result: {
+          feedback: sq.answers[0].analyses[0].feedback_json,
+          stt: sq.answers[0].analyses[0].stt_json,
+          voice: sq.answers[0].analyses[0].voice_json,
+          refined: sq.answers[0].analyses[0].refined_words_json,
+        },
+      };
+    });
+
+    return result;
+
+    console.log(session);
   }
 }

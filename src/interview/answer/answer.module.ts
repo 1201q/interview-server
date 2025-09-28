@@ -4,7 +4,7 @@ import { AuthModule } from "src/auth/auth.module";
 
 import { InterviewAnswerService } from "./answer.service";
 import { InterviewAnswerController } from "./answer.controller";
-import { Answer } from "../../common/entities/entities";
+import { Answer, AnswerAnalysis } from "../../common/entities/entities";
 
 import { InterviewSessionModule } from "../session/session.module";
 import { SessionQuestionModule } from "../question/question.module";
@@ -15,7 +15,7 @@ import { ExternalServerModule } from "../../external-server/external-server.modu
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Answer]),
+    TypeOrmModule.forFeature([Answer, AnswerAnalysis]),
     AuthModule,
 
     SessionQuestionModule,

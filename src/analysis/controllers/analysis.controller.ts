@@ -78,6 +78,7 @@ export class AnalysisController {
       jobRole: dto.jobRole,
     });
 
+    console.log(refined);
     const finalText = refined.join(" ");
 
     if (mode) {
@@ -89,7 +90,7 @@ export class AnalysisController {
       return evalAnswer;
     }
 
-    return refined;
+    return { refined: refined };
   }
 
   @Get("/test/:answerId")
@@ -108,5 +109,11 @@ export class AnalysisController {
     const res = await this.flaskService.enqueueAudioJob(dto);
 
     return res;
+  }
+
+  //
+  @Get("/result/:sessionId")
+  async testJSON(@Param("sessionId") sessionId: string) {
+    return this.analysisService.getAnalysis(sessionId);
   }
 }

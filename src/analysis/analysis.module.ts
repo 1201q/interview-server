@@ -14,9 +14,16 @@ import { RefineWorker } from "./workers/refine.worker";
 import { FeedbackWorker } from "./workers/feedback.worker";
 import { AudioWorker } from "./workers/audio.worker";
 import { OciDBService } from "src/external-server/oci-db.service";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { InterviewSession } from "src/common/entities/entities";
 
 @Module({
-  imports: [AuthModule, ExternalServerModule, QueueModule],
+  imports: [
+    TypeOrmModule.forFeature([InterviewSession]),
+    AuthModule,
+    ExternalServerModule,
+    QueueModule,
+  ],
   controllers: [AnalysisController, AudioCallbackController],
   providers: [
     AnalysisService,

@@ -4,6 +4,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, EntityManager, Repository } from "typeorm";
 import {
   Answer,
+  AnswerAnalysis,
   InterviewSession,
   Question,
 } from "../../common/entities/entities";
@@ -63,10 +64,21 @@ export class InterviewSessionService {
 
       // 3. answer 생성
       const answerRepo = manager.getRepository(Answer);
+
       const answers = sessionQuestions.map((sq) =>
         answerRepo.create({
           session_question: sq,
           status: "waiting",
+          analyses: [
+            manager.getRepository(AnswerAnalysis).create({
+              status: "pending",
+              feedback_json: null,
+              stt_json: null,
+              refined_words_json: null,
+              voice_json: null,
+              last_error: null,
+            }),
+          ],
         }),
       );
 
@@ -298,9 +310,10 @@ export class InterviewSessionService {
         .getRepository(InterviewSession)
         .update(session.id, { status: "not_started" });
 
+      const analysisRepo = manager.getRepository(AnswerAnalysis);
+
       for (const sq of session.session_questions) {
         for (const ans of sq.answers ?? []) {
-          console.log(ans);
           await manager.getRepository(Answer).update(ans.id, {
             status: "waiting",
             audio_path: null,
@@ -308,6 +321,18 @@ export class InterviewSessionService {
             started_at: null,
             ended_at: null,
           });
+
+          await analysisRepo.update(
+            { answer: { id: ans.id } },
+            {
+              status: "pending",
+              feedback_json: null,
+              stt_json: null,
+              refined_words_json: null,
+              voice_json: null,
+              last_error: null,
+            },
+          );
         }
       }
     });
