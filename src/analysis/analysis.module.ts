@@ -16,6 +16,7 @@ import { AudioWorker } from "./workers/audio.worker";
 import { OciDBService } from "src/external-server/oci-db.service";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { InterviewSession } from "src/common/entities/entities";
+import { OpenaiModule } from "@/openai/openai.module";
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { InterviewSession } from "src/common/entities/entities";
     AuthModule,
     ExternalServerModule,
     QueueModule,
+    OpenaiModule,
   ],
   controllers: [AnalysisController, AudioCallbackController],
   providers: [

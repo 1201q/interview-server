@@ -16,6 +16,7 @@ import { TranscribeModule } from "./transcribe/transcribe.module";
 import { ExternalServerModule } from "./external-server/external-server.module";
 import { GenerateQuestionModule } from "./generate-question/generate-question.module";
 import { AnalysisModule } from "./analysis/analysis.module";
+import { OpenaiModule } from "./openai/openai.module";
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { AnalysisModule } from "./analysis/analysis.module";
     ExternalServerModule,
     TranscribeModule,
     AnalysisModule,
+    OpenaiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

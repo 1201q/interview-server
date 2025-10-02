@@ -31,11 +31,14 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import { FlaskServerService } from "../external-server/flask-server.service";
 import { Response } from "express";
 
+import { OpenAIService } from "@/openai/openai.service";
+
 @ApiTags("이력서 생성")
 @Controller("generate-question")
 export class GenerateQuestionController {
   constructor(
     private readonly generateService: GenerateQuestionService,
+    private readonly ai: OpenAIService,
     private readonly flaskServerService: FlaskServerService,
   ) {}
 
@@ -144,5 +147,33 @@ export class GenerateQuestionController {
     console.log(data);
 
     return { result: data.result };
+  }
+
+  @Post("/test/embedding")
+  @ApiOperation({ summary: "이력서 및 채용공고 기반 질문 생성 요청" })
+  @HttpCode(HttpStatus.CREATED)
+  async embedding(@Body() createDto: CreateQuestionRequestDto): Promise<any> {
+    return this.ai.saveToVectorStore({
+      resumeText: createDto.resume_text,
+      jobText: createDto.job_text,
+      requestId: "test-embedding2",
+    });
+  }
+
+  @Post("/test/summary")
+  @ApiOperation({ summary: "이력서 및 채용공고 기반 질문 생성 요청" })
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        requestId: {
+          type: "string",
+        },
+      },
+    },
+  })
+  @HttpCode(HttpStatus.CREATED)
+  async summary(@Body() dto: { requestId: string }): Promise<any> {
+    return this.generateService.summary(dto.requestId);
   }
 }

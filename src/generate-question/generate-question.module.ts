@@ -8,11 +8,14 @@ import { GenerateQuestionController } from "./generate-question.controller";
 import { Question, GenerateRequest } from "../common/entities/entities";
 import { ExternalServerModule } from "../external-server/external-server.module";
 
+import { OpenaiModule } from "@/openai/openai.module";
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([GenerateRequest, Question]),
     AuthModule,
     ExternalServerModule,
+    OpenaiModule,
   ],
   providers: [GenerateQuestionService, VectorStoreService],
   controllers: [GenerateQuestionController],

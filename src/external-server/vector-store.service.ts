@@ -24,6 +24,7 @@ export class VectorStoreService implements OnModuleInit {
         headers: {
           "X-OpenAI-Api-Key": this.config.get<string>("OPENAI_API_KEY"),
         },
+        skipInitChecks: true,
       },
     );
 

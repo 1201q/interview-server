@@ -1,16 +1,42 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import OpenAI from "openai";
-import { BuildEvaluationPrompt } from "src/common/prompts/analyze.prompt";
-import { EvalRequestDto, STTRefineDto } from "../analysis.dto";
+import {
+  BuildEvaluationPrompt,
+  BuildSegmentsFeedbackPrompt,
+  BuildSTTFeedbackPrompt,
+} from "src/common/prompts/analyze.prompt";
+import {
+  EvalRequestDto,
+  RubricDto,
+  STTRefineDto,
+  STTRefineSegmentsDto,
+  STTRequestDto,
+} from "../analysis.dto";
 import { evalJsonSchema } from "src/common/schemas/eval.schema";
 import { computeScores } from "src/common/utils/scoring";
-import { Readable } from "stream";
-import { BuildSttRefinePrompt } from "src/common/prompts/stt-refine-prompt";
-import z from "zod";
-import { DataSource, Repository } from "typeorm";
+
+import {
+  BuildRefineSegmentsPrompt,
+  BuildSttRefinePromptV3,
+} from "src/common/prompts/stt-refine-prompt";
+
+import { Repository } from "typeorm";
 import { InterviewSession } from "src/common/entities/entities";
 import { InjectRepository } from "@nestjs/typeorm";
+import {
+  RefinedItemZ,
+  RefinedSegmentItemZ,
+} from "src/common/schemas/prompt.schema";
+import { zodTextFormat } from "openai/helpers/zod";
+import { FeedbackSegSchema } from "@/common/schemas/stt-feedback.schema";
+import {
+  BuildRubricPrompt,
+  BuildRubricPromptV2,
+  BuildRubricUserPrompt,
+} from "@/common/prompts/rubric.prompt";
+
+import { OpenAIService } from "@/openai/openai.service";
 
 @Injectable()
 export class AnalysisService {
@@ -18,7 +44,7 @@ export class AnalysisService {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly dataSource: DataSource,
+    private readonly ai: OpenAIService,
 
     @InjectRepository(InterviewSession)
     private readonly sessionRepo: Repository<InterviewSession>,
@@ -60,42 +86,104 @@ export class AnalysisService {
     } catch (error) {}
   }
 
-  async transcript(file: Express.Multer.File) {
-    const stream = Readable.from(file.buffer);
+  async feedbackSegments(dto: {
+    questionText: string;
+    jobRole: string;
+    segments: string[];
+  }) {
+    const format = zodTextFormat(FeedbackSegSchema, "feedback_segments");
 
-    (stream as any).path = file.originalname;
+    const segWithId = dto.segments.map((seg, i) => ({
+      seg_id: `s${i}`,
+      text: seg,
+    }));
 
-    const res = await this.openai.audio.transcriptions.create({
-      model: "whisper-1",
-      file: stream as any,
-      response_format: "verbose_json",
-      timestamp_granularities: ["word", "segment"],
-      language: "ko",
+    const res = await this.openai.responses.parse({
+      model: "gpt-5",
+      input: [
+        {
+          role: "system",
+          content:
+            "당신은 한 기업의 면접관입니다. 면접관으로서 답변에 대한 피드백을 제공하세요.",
+        },
+        {
+          role: "user",
+          content: BuildSegmentsFeedbackPrompt({ ...dto, segments: segWithId }),
+        },
+      ],
+      reasoning: { effort: "low" },
+      text: { format },
     });
 
-    console.log(res);
+    return res.output_parsed;
+  }
 
-    return res;
+  async transcript(file: Express.Multer.File) {
+    const text = await this.ai.transcribe(file);
+    return text;
   }
 
   async refineSttWords(dto: STTRefineDto) {
-    console.log(BuildSttRefinePrompt(dto));
+    const schema = RefinedItemZ(dto.words.length);
+    const format = zodTextFormat(schema, "refined_words");
 
-    try {
-      const res = await this.openai.responses.create({
+    const baseInput = [
+      { role: "user" as const, content: BuildSttRefinePromptV3(dto) },
+    ];
+
+    const run = async (input = baseInput) =>
+      this.openai.responses.parse({
         model: "gpt-5-mini-2025-08-07",
-        input: [{ role: "user", content: BuildSttRefinePrompt(dto) }],
+        input,
         reasoning: { effort: "low" },
+        text: { format, verbosity: "low" },
       });
 
-      const Z = z.array(z.string()).length(dto.words.length);
+    try {
+      const res = await run();
 
+      const result = res.output_parsed.refined_words;
+      const refinedWithId = result.map((w, idx) => ({
+        id: `w${idx}`,
+        word: w,
+      }));
+
+      return refinedWithId;
+    } catch (error) {
+      const safePrompt = `입력과 동일한 길이의 배열을 {"refined_words":[...]}만 출력하세요. 설명/코드블록 금지. ${JSON.stringify(dto.words.map((w) => w.word))}`;
+
+      console.error("Refine failed, retrying with safe prompt...", error);
       try {
-        const corrected = Z.parse(JSON.parse(res.output_text));
+        const res2 = await run([{ role: "user", content: safePrompt }]);
+        const result2 = res2.output_parsed.refined_words;
+        const refinedWithId = result2.map((w, idx) => ({
+          id: `w${idx}`,
+          word: w,
+        }));
+        return refinedWithId;
+      } catch (error2) {
+        console.error("Retry also failed. Returning original words.", error2);
+        return dto.words.map((w, idx) => ({
+          word: w.word,
+          id: `w${idx}`,
+        }));
+      }
+    }
+  }
 
-        return corrected as string[];
-      } catch (error) {}
-    } catch (error) {}
+  async refineSttSegments(dto: STTRefineSegmentsDto) {
+    const schema = RefinedSegmentItemZ(dto.segments.length);
+    const baseInput = [
+      { role: "user" as const, content: BuildRefineSegmentsPrompt(dto) },
+    ];
+
+    const parsed = await this.ai.chatParsed({
+      opts: { input: baseInput, reasoning: { effort: "low" } },
+      schema: schema,
+    });
+
+    console.log(parsed);
+    return parsed.refined_segments;
   }
 
   async getAnalysis(sessionId: string) {
@@ -125,5 +213,21 @@ export class AnalysisService {
     return result;
 
     console.log(session);
+  }
+
+  async rubric(dto: RubricDto) {
+    const run = await this.ai.chat({
+      model: "gpt-5-mini",
+      input: [
+        { role: "system", content: "당신은 한 기업의 면접관입니다." },
+        { role: "user", content: BuildRubricUserPrompt(dto) },
+      ],
+      reasoning: { effort: "medium", summary: "detailed" },
+      tools: this.ai.withFileSearch(dto.vectorId, { max_num_results: 8 }),
+    });
+
+    return run;
+
+    console.log(BuildRubricUserPrompt(dto));
   }
 }

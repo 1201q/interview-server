@@ -12,6 +12,8 @@ import {
 import { ApiConsumes, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
   EvalRequestDto,
+  FeedbackSegmentsDto,
+  RubricDto,
   STTRequestDto,
   UploadAudioDto,
   VoiceAnalysisQueueDto,
@@ -73,22 +75,21 @@ export class AnalysisController {
     const res = await this.analysisService.transcript(file);
 
     const refined = await this.analysisService.refineSttWords({
-      words: res.words.map((w) => w.word),
+      words: res.words,
       questionText: dto.questionText,
       jobRole: dto.jobRole,
     });
 
-    console.log(refined);
-    const finalText = refined.join(" ");
+    // if (mode) {
+    //   const finalText = refined.map((w) => w.word).join(" ");
 
-    if (mode) {
-      const evalAnswer = await this.analysisService.evaluateAnswer({
-        transcript: finalText,
-        section: dto.section,
-        questionText: dto.questionText,
-      });
-      return evalAnswer;
-    }
+    //   const evalAnswer = await this.analysisService.evaluateAnswer({
+    //     transcript: finalText,
+    //     section: dto.section,
+    //     questionText: dto.questionText,
+    //   });
+    //   return evalAnswer;
+    // }
 
     return { refined: refined };
   }
@@ -115,5 +116,59 @@ export class AnalysisController {
   @Get("/result/:sessionId")
   async testJSON(@Param("sessionId") sessionId: string) {
     return this.analysisService.getAnalysis(sessionId);
+  }
+
+  //
+  @Post("/test/refine")
+  @ApiOperation({
+    summary: "stt -> refine 테스트",
+  })
+  @ApiConsumes("multipart/form-data")
+  @UseInterceptors(FileInterceptor("audio"))
+  async sttRefined(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() dto: STTRequestDto,
+  ) {
+    if (!file) {
+      throw new BadRequestException("audio 파일이 필요합니다.");
+    }
+
+    const res = await this.analysisService.transcript(file);
+
+    const refinedSeg = await this.analysisService.refineSttSegments({
+      segments: res.segments,
+      questionText: dto.questionText,
+      jobRole: dto.jobRole,
+    });
+
+    return { segments: res.segments.map((r) => r.text), refinedSeg };
+  }
+
+  @Post("/test/feedback/seg")
+  @ApiOperation({
+    summary: "seg -> feedback 테스트",
+  })
+  async feedbackSeg(@Body() dto: FeedbackSegmentsDto) {
+    console.log(dto);
+
+    const finalText = dto.segments.join(" ");
+
+    console.log(finalText);
+
+    // const res = await this.analysisService.feedbackSegments({
+    //   questionText: dto.questionText!,
+    //   jobRole: dto.jobRole!,
+    //   segments: dto.segments!,
+    // });
+    return finalText;
+  }
+
+  @Post("/test/rubric")
+  @ApiOperation({
+    summary: "rubric 테스트",
+  })
+  async testRubric(@Body() dto: RubricDto) {
+    const res = await this.analysisService.rubric(dto);
+    return res;
   }
 }

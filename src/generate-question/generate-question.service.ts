@@ -20,13 +20,11 @@ import OpenAI from "openai";
 import { ConfigService } from "@nestjs/config";
 import {
   QuestionGeneratorPrompt,
-  QuestionGeneratorPromptV2,
-  QuestionGeneratorPromptV3,
-  QuestionGeneratorSystemPrompt,
+  QuestionGeneratorPromptV5_1_1,
 } from "src/common/prompts/question-generator.prompt";
 import { Response } from "express";
 import {
-  generatedQuestionFormat,
+  makeQuestionSchema,
   QuestionItem,
 } from "src/common/schemas/prompt.schema";
 import { MOCK_QUESTIONS } from "src/common/constants/mock-question";
@@ -37,6 +35,9 @@ import { chain } from "stream-chain";
 import { parser } from "stream-json";
 import { pick } from "stream-json/filters/Pick";
 import { streamArray } from "stream-json/streamers/StreamArray";
+import { zodTextFormat } from "openai/helpers/zod";
+
+import { OpenAIService } from "@/openai/openai.service";
 
 type WriteEventOpts = {
   id?: string | number;
@@ -53,6 +54,7 @@ export class GenerateQuestionService {
   constructor(
     private readonly configService: ConfigService,
     private readonly dataSource: DataSource,
+    private readonly ai: OpenAIService,
 
     private readonly vectorStoreService: VectorStoreService,
 
@@ -220,16 +222,10 @@ export class GenerateQuestionService {
     requestEntity.status = "working";
     await this.requestRepo.save(requestEntity);
 
-    const limits = { basic: 1, experience: 3, job_related: 3, expertise: 3 };
+    const limits = { basic: 2, experience: 3, job_related: 3, expertise: 3 };
     const limitCount = Object.values(limits).reduce((sum, v) => sum + v, 0);
 
     let createdTotal = 0;
-
-    const prompt_text = QuestionGeneratorPromptV3(
-      requestEntity.resume_text,
-      requestEntity.job_text,
-      limits,
-    );
 
     const pt = new PassThrough({ encoding: "utf8" });
     const pipeline = chain([
@@ -278,19 +274,19 @@ export class GenerateQuestionService {
 
         console.log(result);
 
-        const questions = result.output_parsed.questions.map((q) =>
-          this.questionRepo.create({
-            request: requestEntity,
-            text: q.text,
-            based_on: q.based_on,
-            section: q.section,
-          }),
-        );
+        // const questions = result.output_parsed.questions.map((q) =>
+        //   this.questionRepo.create({
+        //     request: requestEntity,
+        //     text: q.text,
+        //     based_on: q.based_on,
+        //     section: q.section,
+        //   }),
+        // );
 
-        await this.questionRepo.save(questions);
+        // await this.questionRepo.save(questions);
 
-        requestEntity.status = "completed";
-        await this.requestRepo.save(requestEntity);
+        // requestEntity.status = "completed";
+        // await this.requestRepo.save(requestEntity);
 
         this.writeEvent(res, { id: nextId(), event: "done", data: "[DONE]" });
       } catch (error) {
@@ -322,8 +318,17 @@ export class GenerateQuestionService {
       safeEnd();
     });
 
+    const prompt_text = QuestionGeneratorPromptV5_1_1(
+      requestEntity.resume_text,
+      requestEntity.job_text,
+      limits,
+    );
+
+    const schema = makeQuestionSchema(limitCount);
+    const format = zodTextFormat(schema, "generated_questions");
+
     const stream = this.openai.responses.stream({
-      model: "gpt-5",
+      model: "gpt-5-mini",
       input: [
         {
           role: "system",
@@ -332,7 +337,7 @@ export class GenerateQuestionService {
         },
         { role: "user", content: prompt_text },
       ],
-      text: { format: generatedQuestionFormat },
+      text: { format: format },
       reasoning: { effort: "low" },
     });
 
@@ -471,5 +476,29 @@ export class GenerateQuestionService {
     return setInterval(() => {
       if (!res.writableEnded) res.write(`:hb ${Date.now()}\n\n`);
     }, ms);
+  }
+
+  async summary(requestId: string) {
+    const baseInput = [
+      {
+        role: "system" as const,
+        content: "당신은 한 기업의 면접관입니다.",
+      },
+      {
+        role: "user" as const,
+        content:
+          "이력서와 채용공고를 참고해서 해당 지원자의 강점과 약점을 분석해줘. 가급적 근거도 같이 달아줘. JSON만 출력해줘.",
+      },
+    ];
+
+    const res = await this.ai.chat({
+      model: "gpt-5",
+      input: baseInput,
+      tools: this.ai.withFileSearch(requestId),
+      reasoning: { effort: "low", summary: "detailed" },
+      text: { verbosity: "low" },
+    });
+
+    return res;
   }
 }
