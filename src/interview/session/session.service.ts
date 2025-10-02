@@ -23,6 +23,7 @@ import {
   sttKeywordFormat,
 } from "src/common/schemas/prompt.schema";
 import { SttKeywordPrompt } from "src/common/prompts/stt-keyword.prompt";
+import { RubricProducer } from "@/analysis/producer/rubric.producer";
 
 @Injectable()
 export class InterviewSessionService {
@@ -32,6 +33,7 @@ export class InterviewSessionService {
     private readonly config: ConfigService,
     private readonly dataSource: DataSource,
     private readonly questionService: SessionQuestionService,
+    private readonly rubricProducer: RubricProducer,
 
     @InjectRepository(InterviewSession)
     private readonly sessionRepo: Repository<InterviewSession>,
@@ -83,6 +85,8 @@ export class InterviewSessionService {
       );
 
       await answerRepo.save(answers);
+
+      await this.rubricProducer.enqueueGenerateRubric(session.id);
 
       return { id: session.id, status: session.status };
     });

@@ -113,10 +113,6 @@ export class ChatgptService {
         );
       }
 
-      console.log(validation);
-
-      console.log(res);
-
       return validation.data;
     } catch (error) {
       this.logger.error("Error calling ChatGPT", error);

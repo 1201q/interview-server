@@ -88,11 +88,19 @@ export class GenerateQuestionService {
       try {
         this.logger.log(`vector store에 업로드 중... ${request.id}`);
 
-        await this.vectorStoreService.save(
-          dto.resume_text,
-          dto.job_text,
-          request.id,
-        );
+        const vectorResult = await this.ai.saveToVectorStore({
+          resumeText: dto.resume_text,
+          jobText: dto.job_text,
+          requestId: request.id,
+        });
+
+        console.log(vectorResult);
+
+        // await this.vectorStoreService.save(
+        //   dto.resume_text,
+        //   dto.job_text,
+        //   request.id,
+        // );
 
         const response = await this.questionGenerator(
           dto.resume_text,
@@ -113,7 +121,7 @@ export class GenerateQuestionService {
         await manager.save(questions);
 
         request.status = "completed";
-        request.vector_id = request.id;
+        request.vector_id = vectorResult.storeId;
 
         await manager.save(request);
 
@@ -124,11 +132,11 @@ export class GenerateQuestionService {
         request.status = "failed";
 
         await manager.save(request);
-        await this.vectorStoreService
-          .deleteByRequestId(request.id)
-          .catch((e) => {
-            this.logger.warn(`fail: vector 삭제 실패 ${request.id}`, e.stack);
-          });
+        // await this.vectorStoreService
+        //   .deleteByRequestId(request.id)
+        //   .catch((e) => {
+        //     this.logger.warn(`fail: vector 삭제 실패 ${request.id}`, e.stack);
+        //   });
 
         throw new InternalServerErrorException("질문 생성 중 오류 발생.");
       }
@@ -427,13 +435,20 @@ export class GenerateQuestionService {
       try {
         this.logger.log(`vector store에 업로드 중... ${request.id}`);
 
-        await this.vectorStoreService.save(
-          dto.resume_text,
-          dto.job_text,
-          request.id,
-        );
+        const vectorResult = await this.ai.saveToVectorStore({
+          resumeText: dto.resume_text,
+          jobText: dto.job_text,
+          requestId: request.id,
+        });
 
-        request.vector_id = request.id;
+        console.log(vectorResult);
+        // await this.vectorStoreService.save(
+        //   dto.resume_text,
+        //   dto.job_text,
+        //   request.id,
+        // );
+
+        request.vector_id = vectorResult.storeId;
         await manager.save(request);
         resultDto.status = "completed";
       } catch (error) {
@@ -442,11 +457,11 @@ export class GenerateQuestionService {
         request.status = "failed";
 
         await manager.save(request);
-        await this.vectorStoreService
-          .deleteByRequestId(request.id)
-          .catch((e) => {
-            this.logger.warn(`fail: vector 삭제 실패 ${request.id}`, e.stack);
-          });
+        // await this.vectorStoreService
+        //   .deleteByRequestId(request.id)
+        //   .catch((e) => {
+        //     this.logger.warn(`fail: vector 삭제 실패 ${request.id}`, e.stack);
+        //   });
 
         throw new InternalServerErrorException("Request 생성 중 오류 발생.");
       }

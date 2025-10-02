@@ -165,6 +165,22 @@ export class RubricDto {
   vectorId: string;
 }
 
+export class GenerateRubricDto {
+  @ApiProperty({
+    description: "질문 배열",
+    required: true,
+  })
+  @IsArray()
+  questionList: { id: string; text: string }[];
+
+  @ApiProperty({
+    description: "vector request id",
+    required: true,
+  })
+  @IsString()
+  vectorId: string;
+}
+
 export class VoiceAnalysisQueueDto {
   @ApiProperty({ description: "object name", required: true })
   @IsString()

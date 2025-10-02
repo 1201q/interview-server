@@ -21,6 +21,7 @@ import { FlowProducer } from "bullmq";
       }),
     }),
     BullModule.registerQueue(
+      { name: "rubric" },
       { name: "stt" },
       { name: "refine" },
       { name: "feedback" },
@@ -31,6 +32,7 @@ import { FlowProducer } from "bullmq";
       adapter: ExpressAdapter,
     }),
     BullBoardModule.forFeature(
+      { name: "rubric", adapter: BullMQAdapter },
       {
         name: "stt",
         adapter: BullMQAdapter,

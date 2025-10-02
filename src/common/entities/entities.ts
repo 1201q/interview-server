@@ -74,6 +74,15 @@ export class InterviewSession {
     cascade: true,
   })
   session_questions: SessionQuestion[];
+
+  @Column({ default: "pending" })
+  rubric_gen_status: "pending" | "processing" | "completed" | "failed";
+
+  @Column({ type: "json", nullable: true })
+  rubric_json: object;
+
+  @Column("clob", { nullable: true })
+  rubric_last_error?: string | null;
 }
 
 @Entity({ name: "session_questions" })
@@ -105,6 +114,15 @@ export class SessionQuestion {
     cascade: true,
   })
   answers: Answer[];
+
+  @Column({ default: "pending" })
+  rubric_status: "pending" | "processing" | "completed" | "failed";
+
+  @Column({ type: "json", nullable: true })
+  rubric_json: object;
+
+  @Column("clob", { nullable: true })
+  rubric_last_error?: string | null;
 }
 
 @Entity({ name: "answers" })

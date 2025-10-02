@@ -12,6 +12,7 @@ import {
 } from "../../common/entities/entities";
 import { SessionQuestionService } from "../question/question.service";
 import { ExternalServerModule } from "../../external-server/external-server.module";
+import { AnalysisModule } from "@/analysis/analysis.module";
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { ExternalServerModule } from "../../external-server/external-server.modu
     ]),
     AuthModule,
     ExternalServerModule,
+    AnalysisModule,
   ],
   providers: [InterviewSessionService, SessionQuestionService],
   controllers: [InterviewSessionController],

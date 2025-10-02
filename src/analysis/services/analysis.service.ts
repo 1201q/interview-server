@@ -4,14 +4,13 @@ import OpenAI from "openai";
 import {
   BuildEvaluationPrompt,
   BuildSegmentsFeedbackPrompt,
-  BuildSTTFeedbackPrompt,
 } from "src/common/prompts/analyze.prompt";
 import {
   EvalRequestDto,
+  GenerateRubricDto,
   RubricDto,
   STTRefineDto,
   STTRefineSegmentsDto,
-  STTRequestDto,
 } from "../analysis.dto";
 import { evalJsonSchema } from "src/common/schemas/eval.schema";
 import { computeScores } from "src/common/utils/scoring";
@@ -31,12 +30,13 @@ import {
 import { zodTextFormat } from "openai/helpers/zod";
 import { FeedbackSegSchema } from "@/common/schemas/stt-feedback.schema";
 import {
-  BuildRubricPrompt,
-  BuildRubricPromptV2,
   BuildRubricUserPrompt,
+  BuildRubricUserPromptV2,
+  BuildRubricUserPromptV3,
 } from "@/common/prompts/rubric.prompt";
 
 import { OpenAIService } from "@/openai/openai.service";
+import { RubricResponseSchema } from "@/common/schemas/rubric.schema";
 
 @Injectable()
 export class AnalysisService {
@@ -216,18 +216,38 @@ export class AnalysisService {
   }
 
   async rubric(dto: RubricDto) {
-    const run = await this.ai.chat({
-      model: "gpt-5-mini",
-      input: [
-        { role: "system", content: "당신은 한 기업의 면접관입니다." },
-        { role: "user", content: BuildRubricUserPrompt(dto) },
-      ],
-      reasoning: { effort: "medium", summary: "detailed" },
-      tools: this.ai.withFileSearch(dto.vectorId, { max_num_results: 8 }),
+    const run = await this.ai.chatParsed({
+      opts: {
+        model: "gpt-5-mini",
+        input: [
+          { role: "system", content: "당신은 한 기업의 면접관입니다." },
+          { role: "user", content: BuildRubricUserPromptV2(dto) },
+        ],
+        reasoning: { effort: "medium", summary: "detailed" },
+        tools: this.ai.withFileSearch(dto.vectorId, { max_num_results: 8 }),
+        text: { verbosity: "medium" },
+      },
+      schema: RubricResponseSchema,
     });
 
     return run;
+  }
 
-    console.log(BuildRubricUserPrompt(dto));
+  async generateRubric(dto: GenerateRubricDto) {
+    const run = await this.ai.chatParsed({
+      opts: {
+        model: "gpt-5-mini",
+        input: [
+          { role: "system", content: "당신은 한 기업의 면접관입니다." },
+          { role: "user", content: BuildRubricUserPromptV3(dto) },
+        ],
+        reasoning: { effort: "medium", summary: "detailed" },
+        tools: this.ai.withFileSearch(dto.vectorId, { max_num_results: 8 }),
+        text: { verbosity: "medium" },
+      },
+      schema: RubricResponseSchema,
+    });
+
+    return run;
   }
 }

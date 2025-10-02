@@ -31,7 +31,7 @@ export class OpenAIService {
     schema,
     parseOpts,
   }: ParsedChatOpts<T>): Promise<T> {
-    return this.chatgpt.callParsedResponse<T>(opts as any, schema, parseOpts);
+    return this.chatgpt.callParsedResponse<T>(opts, schema, parseOpts);
   }
 
   // ---------- STT ----------
