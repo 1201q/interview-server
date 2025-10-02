@@ -12,6 +12,7 @@ import { SessionQuestionModule } from "../question/question.module";
 import { FollwupModule } from "../followup/followup.module";
 
 import { ExternalServerModule } from "../../external-server/external-server.module";
+import { AnalysisModule } from "@/analysis/analysis.module";
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { ExternalServerModule } from "../../external-server/external-server.modu
     InterviewSessionModule,
     FollwupModule,
     ExternalServerModule,
+    AnalysisModule,
   ],
   providers: [InterviewAnswerService],
   controllers: [InterviewAnswerController],

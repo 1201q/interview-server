@@ -1,11 +1,17 @@
-import { Injectable, Logger } from "@nestjs/common";
-import { OnWorkerEvent, Processor, WorkerHost } from "@nestjs/bullmq";
-import type { Job } from "bullmq";
+import { Inject, Injectable, Logger } from "@nestjs/common";
+import {
+  InjectQueue,
+  OnWorkerEvent,
+  Processor,
+  WorkerHost,
+} from "@nestjs/bullmq";
+import type { Job, Queue } from "bullmq";
 
 import { DataSource } from "typeorm";
 import { InterviewSession, SessionQuestion } from "@/common/entities/entities";
 import { AnalysisService } from "../services/analysis.service";
 import { GenerateRubricDto } from "../analysis.dto";
+import Redis from "ioredis";
 
 @Injectable()
 @Processor("rubric", { concurrency: 2 })
@@ -15,6 +21,9 @@ export class RubricWorker extends WorkerHost {
   constructor(
     private readonly ds: DataSource,
     private readonly analysis: AnalysisService,
+
+    @InjectQueue("feedback") private readonly feedbackQ: Queue,
+    @Inject("REDIS_CLIENT") private readonly redis: Redis,
   ) {
     super();
   }
@@ -80,6 +89,8 @@ export class RubricWorker extends WorkerHost {
         rubric_last_error: null,
       });
       await job.updateProgress(100);
+
+      await this.afterRubricCompleted(sessionId);
     } catch (error) {
       await sessionRepo.update(sessionId, {
         rubric_gen_status: "failed",
@@ -102,6 +113,30 @@ export class RubricWorker extends WorkerHost {
 
     this.logger.debug(`3. GPT 응답 완료`);
     return res;
+  }
+
+  private async afterRubricCompleted(sessionId: string) {
+    const key = `feedback:pending:${sessionId}`;
+    const answerIds = await this.redis.smembers(key);
+
+    if (answerIds.length) {
+      for (const answerId of answerIds) {
+        await this.feedbackQ.add(
+          "feedback",
+          { answerId },
+          {
+            jobId: `feedback:${answerId}`,
+            attempts: 3,
+            backoff: { type: "exponential", delay: 5000 },
+            removeOnComplete: true,
+          },
+        );
+      }
+      await this.redis.del(key);
+      this.logger.debug(
+        `Enqueued ${answerIds.length} feedback jobs for session ${sessionId}.`,
+      );
+    }
   }
 
   @OnWorkerEvent("active")

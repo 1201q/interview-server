@@ -13,6 +13,7 @@ import { FollowupService } from "../followup/followup.service";
 import { SubmitAnswerResponseDto } from "./answer.dto";
 import { FlaskServerService } from "src/external-server/flask-server.service";
 import { OciDBService } from "src/external-server/oci-db.service";
+import { SttProducer } from "@/analysis/producer/stt.producer";
 
 @Injectable()
 export class InterviewAnswerService {
@@ -28,6 +29,8 @@ export class InterviewAnswerService {
 
     private readonly flaskService: FlaskServerService,
     private readonly ociUploadService: OciDBService,
+
+    private readonly sttProducer: SttProducer,
   ) {}
 
   async startAnswer(sessionId: string, questionId: string): Promise<void> {
@@ -195,6 +198,8 @@ export class InterviewAnswerService {
           }
 
           await answerRepo.update(answer.id, newData);
+
+          await this.sttProducer.enqueueSTT(answer.id);
 
           const nextQuestion = await this.questionService.getNext(
             manager,

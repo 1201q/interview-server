@@ -16,6 +16,8 @@ import { AudioWorker } from "./workers/audio.worker";
 import { OciDBService } from "src/external-server/oci-db.service";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import {
+  Answer,
+  AnswerAnalysis,
   GenerateRequest,
   InterviewSession,
   Question,
@@ -24,6 +26,7 @@ import {
 import { OpenaiModule } from "@/openai/openai.module";
 import { RubricProducer } from "./producer/rubric.producer";
 import { RubricWorker } from "./workers/rubric.worker";
+import { SttProducer } from "./producer/stt.producer";
 
 @Module({
   imports: [
@@ -32,6 +35,8 @@ import { RubricWorker } from "./workers/rubric.worker";
       SessionQuestion,
       Question,
       GenerateRequest,
+      AnswerAnalysis,
+      Answer,
     ]),
     AuthModule,
     ExternalServerModule,
@@ -51,7 +56,8 @@ import { RubricWorker } from "./workers/rubric.worker";
     AudioWorker,
     RubricProducer,
     RubricWorker,
+    SttProducer,
   ],
-  exports: [AnalysisService, RubricProducer],
+  exports: [AnalysisService, RubricProducer, SttProducer],
 })
 export class AnalysisModule {}
