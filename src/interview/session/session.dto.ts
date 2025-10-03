@@ -3,33 +3,14 @@ import { Type } from "class-transformer";
 import {
   ArrayNotEmpty,
   ArrayUnique,
-  IsArray,
   IsNumber,
-  IsOptional,
   IsUUID,
   ValidateNested,
 } from "class-validator";
 
-export class GenerateResponseDto {
-  @ApiProperty({ description: "생성 요청 ID", type: String })
-  id: string;
-
-  @ApiProperty({
-    description: "요청 상태",
-    enum: ["completed", "failed"],
-  })
-  status: "completed" | "failed";
-}
-
-export class StartSessionResponseDto {
-  @ApiProperty({ description: "세션 ID", type: String })
-  id: string;
-
-  @ApiProperty({
-    description: "세션 상태",
-    enum: ["not_started", "in_progress", "completed", "expired"],
-  })
-  status: "not_started" | "in_progress" | "completed" | "expired";
+export class SessionResponseDto {
+  @ApiProperty({ description: "session_id", type: String })
+  session_id: string;
 }
 
 export class SessionQuestionItemDto {
@@ -48,7 +29,7 @@ export class CreateInterviewSessionBodyDto {
     description: "request ID",
     type: "string",
     format: "uuid",
-    default: "5571689e-2e6a-4e98-b727-92835552b23f",
+    default: "d2151465-878d-4996-9aba-c2dd0e830598",
   })
   @IsUUID()
   request_id: string;
@@ -57,8 +38,12 @@ export class CreateInterviewSessionBodyDto {
     description: "메인으로 사용할 질문 목록 (질문ID, 순서)",
     type: [SessionQuestionItemDto],
     default: [
-      { question_id: "28d1d52a-7efd-4a20-87a3-9372f0fc45f1", order: 0 },
-      { question_id: "3ef93b01-f463-4286-b0bf-9596d74b673e", order: 1 },
+      { question_id: "97b93e5d-7805-4479-8b53-fc1f1a228bcd", order: 0 },
+      { question_id: "2f981d94-7eee-4cb9-b065-e53b246fd059", order: 1 },
+      { question_id: "9d0865f8-9a6d-463d-a30d-d2eab3b244df", order: 2 },
+      { question_id: "6b9e60f4-64e6-4143-8c93-4cf230f8d582", order: 3 },
+      { question_id: "ee470961-8ef6-405c-80ad-fae3f5b8e671", order: 4 },
+      { question_id: "9a026b0a-f615-4a8c-b0da-9c765a67fde1", order: 5 },
     ],
   })
   @ValidateNested({ each: true })
@@ -75,11 +60,11 @@ export class CreateInterviewSessionDto extends CreateInterviewSessionBodyDto {
   @IsUUID()
   user_id: string;
 }
-// create
 
-export class InterviewSessionDetailDto {
+// create
+export class SessionDetailDto {
   @ApiProperty({ type: String, format: "uuid" })
-  id: string;
+  session_id: string;
 
   @ApiProperty({ enum: ["not_started", "in_progress", "completed", "expired"] })
   status: "not_started" | "in_progress" | "completed" | "expired";
@@ -91,35 +76,16 @@ export class InterviewSessionDetailDto {
   questions: any[];
 }
 
-export class InterviewJobRoleDto {
-  @ApiProperty({ description: "직군 이름", type: String })
-  @IsOptional()
-  job_role?: string;
+export class SessionRubricDto {
+  @ApiProperty({ type: String, format: "uuid" })
+  session_id: string;
 
-  @ApiProperty({
-    description: "요청 상태",
-    enum: ["completed", "failed"],
-  })
-  status: "completed" | "failed";
-}
+  @ApiProperty({ enum: ["pending", "processing", "completed", "failed"] })
+  rubric_gen_status: "pending" | "processing" | "completed" | "failed";
 
-// stt
-export class KeywordsForSttItemDto {
-  @ApiProperty({ description: "질문 ID", format: "uuid" })
-  @IsUUID()
-  id: string;
+  @ApiProperty({ type: Object })
+  rubric_json: object | null;
 
-  @ApiProperty({ description: "keywords" })
-  @IsArray()
-  stt_keywords: string[];
-}
-
-export class KeywordsForSttDto {
-  @ValidateNested({ each: true })
-  @Type(() => KeywordsForSttItemDto)
-  @ArrayNotEmpty()
-  @ArrayUnique((o: KeywordsForSttItemDto) => o.id, {
-    message: "questionId must be unique",
-  })
-  keywords: KeywordsForSttItemDto[];
+  @ApiProperty({ description: "rubric_error", type: String })
+  rubric_error: string | null;
 }

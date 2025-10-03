@@ -1,25 +1,9 @@
-import {
-  BadRequestException,
-  Body,
-  Controller,
-  HttpStatus,
-  Post,
-  Req,
-} from "@nestjs/common";
-import {
-  ApiCookieAuth,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from "@nestjs/swagger";
+import { Body, Controller, Post, Req } from "@nestjs/common";
+import { ApiCookieAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Request } from "express";
 import { AuthService } from "src/auth/auth.service";
 import { TranscribeService } from "./transcribe.service";
-import {
-  CreateRealtimeTokenDto,
-  RefineBodyDto,
-  RefineResponseDto,
-} from "./transcribe.dto";
+import { CreateRealtimeTokenDto } from "./transcribe.dto";
 import { SttBiasPrompt } from "src/common/prompts/stt-bias-prompt";
 
 @ApiTags("음성 필사")
@@ -68,26 +52,5 @@ export class TranscribeController {
       await this.transcribeService.testcreateRealtimeSession(context);
 
     return session;
-  }
-
-  @Post("/refine")
-  @ApiOperation({ summary: "텍스트 보정" })
-  @ApiResponse({ status: HttpStatus.OK, type: RefineResponseDto })
-  async refineTranscript(@Body() body: RefineBodyDto) {
-    const { transcript, jobRole, questionText, keywords, prevTail } = body;
-
-    const context = SttBiasPrompt({
-      keywords: keywords,
-      questionText: questionText,
-      jobRole: jobRole,
-      prevTail: prevTail,
-    });
-
-    const result = await this.transcribeService.refineTranscript(
-      context,
-      transcript,
-    );
-
-    return result;
   }
 }

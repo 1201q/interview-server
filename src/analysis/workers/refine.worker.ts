@@ -28,10 +28,10 @@ export class RefineWorker extends WorkerHost {
 
     const test = await this.ds.getRepository(Answer).findOne({
       where: { id: answerId },
-      relations: ["analyses"],
+      relations: ["analysis"],
     });
 
-    console.log(test.analyses);
+    console.log(test.analysis);
 
     await this.ds.getRepository(AnswerAnalysis).save({
       answer: { id: answerId },

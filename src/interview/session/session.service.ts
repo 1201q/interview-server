@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 
 import { DataSource, EntityManager, Repository } from "typeorm";
@@ -6,28 +6,20 @@ import {
   Answer,
   AnswerAnalysis,
   InterviewSession,
-  Question,
 } from "../../common/entities/entities";
 import {
   CreateInterviewSessionDto,
-  InterviewJobRoleDto,
-  InterviewSessionDetailDto,
-  KeywordsForSttDto,
+  SessionDetailDto,
+  SessionResponseDto,
+  SessionRubricDto,
 } from "./session.dto";
 import { SessionQuestionService } from "../question/question.service";
-import { InterviewRolePrompt } from "src/common/prompts/interview-role.prompt";
-import OpenAI from "openai";
 import { ConfigService } from "@nestjs/config";
-import {
-  KeywordsForSttDtoSchema,
-  sttKeywordFormat,
-} from "src/common/schemas/prompt.schema";
-import { SttKeywordPrompt } from "src/common/prompts/stt-keyword.prompt";
 import { RubricProducer } from "@/analysis/producer/rubric.producer";
 
 @Injectable()
 export class InterviewSessionService {
-  private openai: OpenAI;
+  private readonly logger = new Logger(InterviewSessionService.name);
 
   constructor(
     private readonly config: ConfigService,
@@ -40,24 +32,24 @@ export class InterviewSessionService {
 
     @InjectRepository(Answer)
     private readonly answerRepo: Repository<Answer>,
-  ) {
-    this.openai = new OpenAI({
-      apiKey: this.config.get("OPENAI_API_KEY"),
-    });
-  }
+  ) {}
 
-  async createSession(dto: CreateInterviewSessionDto) {
-    return this.dataSource.transaction(async (manager) => {
+  async createSession(
+    dto: CreateInterviewSessionDto,
+  ): Promise<SessionResponseDto> {
+    let createdSessionId: string;
+
+    const result = await this.dataSource.transaction(async (manager) => {
       // 1. 세션 생성
       const session = manager.create(InterviewSession, {
         user_id: dto.user_id,
         status: "not_started",
         request: { id: dto.request_id },
       });
-
       await manager.save(session);
+      createdSessionId = session.id;
 
-      // 2. session Question 생성.
+      // 2. sQuestion 생성.
       const sessionQuestions = await this.questionService.bulkCreateQuestions(
         session,
         dto.questions,
@@ -66,40 +58,48 @@ export class InterviewSessionService {
 
       // 3. answer 생성
       const answerRepo = manager.getRepository(Answer);
-
       const answers = sessionQuestions.map((sq) =>
-        answerRepo.create({
-          session_question: sq,
-          status: "waiting",
-          analyses: [
-            manager.getRepository(AnswerAnalysis).create({
-              status: "pending",
-              feedback_json: null,
-              stt_json: null,
-              refined_words_json: null,
-              voice_json: null,
-              last_error: null,
-            }),
-          ],
+        answerRepo.create({ session_question: sq, status: "waiting" }),
+      );
+      const savedAnswers = await answerRepo.save(answers);
+
+      // 4. answerAnalysis 생성
+      const analysisRepo = manager.getRepository(AnswerAnalysis);
+      const analyses = savedAnswers.map((ans) =>
+        analysisRepo.create({
+          answer: ans,
+          status: "pending",
+          feedback_json: null,
+          stt_json: null,
+          refined_json: null,
+          voice_json: null,
+          last_error: null,
         }),
       );
 
-      await answerRepo.save(answers);
+      await analysisRepo.save(analyses);
 
-      await this.rubricProducer.enqueueGenerateRubric(session.id);
-
-      return { id: session.id, status: session.status };
+      return { session_id: session.id };
     });
+
+    // 5. 커밋 후 큐 발행
+    try {
+      await this.rubricProducer.enqueueGenerateRubric(createdSessionId!);
+    } catch (error) {
+      this.logger.warn(`enqueue GenerateRubric failed: ${error}`);
+    }
+
+    return result;
   }
 
-  async getSessionDetail(id: string): Promise<InterviewSessionDetailDto> {
+  async getSessionDetail(id: string): Promise<SessionDetailDto> {
     const session = await this.sessionRepo.findOne({
       where: { id },
       relations: [
         "session_questions",
         "session_questions.question",
         "session_questions.answers",
-        "session_questions.answers.analyses",
+        "session_questions.answers.analysis",
       ],
     });
 
@@ -108,22 +108,39 @@ export class InterviewSessionService {
     }
 
     return {
-      id: session.id,
+      session_id: session.id,
       status: session.status,
       created_at: session.created_at.toISOString(),
       questions: session.session_questions.map((sq) => ({
         id: sq.id,
-        question_id: sq.question.id,
+        question_id: sq.question.id ?? null,
         order: sq.order,
         type: sq.type,
         text: sq.type === "main" ? sq.question.text : sq.followup_text,
         status: sq.answers[0]?.status ?? "waiting",
-        answer: sq.answers[0]?.text ?? null,
       })),
     };
   }
 
-  async startSession(sessionId: string) {
+  async getSessionRubric(id: string): Promise<SessionRubricDto> {
+    const session = await this.sessionRepo.findOne({
+      where: { id },
+      relations: ["session_questions"],
+    });
+
+    if (!session) {
+      throw new NotFoundException("세션을 찾을 수 없습니다.");
+    }
+
+    return {
+      session_id: session.id,
+      rubric_gen_status: session.rubric_gen_status,
+      rubric_json: session.rubric_json,
+      rubric_error: session.rubric_last_error ?? null,
+    };
+  }
+
+  async startSession(sessionId: string): Promise<SessionResponseDto> {
     const session = await this.sessionRepo.findOne({
       where: { id: sessionId },
       relations: ["session_questions", "session_questions.answers"],
@@ -150,10 +167,13 @@ export class InterviewSessionService {
       await this.answerRepo.update(firstAnswers.id, { status: "ready" });
     }
 
-    return { id: session.id, status: session.status };
+    return { session_id: session.id };
   }
 
-  async finishSession(manager: EntityManager, sessionId: string) {
+  async finishSession(
+    manager: EntityManager,
+    sessionId: string,
+  ): Promise<SessionResponseDto> {
     const repo = manager.getRepository(InterviewSession);
 
     const session = await repo.findOne({
@@ -169,137 +189,12 @@ export class InterviewSessionService {
     }
 
     await repo.update(sessionId, { status: "completed" });
-  }
 
-  async getJobRoleFromSessionId(
-    sessionId: string,
-  ): Promise<InterviewJobRoleDto> {
-    const session = await this.sessionRepo.findOne({
-      where: { id: sessionId },
-      relations: ["request"],
-    });
-
-    if (!session) {
-      throw new NotFoundException("세션을 찾을 수 없습니다.");
-    }
-
-    return await this.inferRoleFromJobText(session.request.job_text);
-  }
-
-  async getJobRoleFromJobText(jobText: string): Promise<InterviewJobRoleDto> {
-    return await this.inferRoleFromJobText(jobText);
-  }
-
-  async getKeywordsForStt(sessionId: string): Promise<KeywordsForSttDto> {
-    const session = await this.sessionRepo.findOne({
-      where: { id: sessionId },
-      relations: ["session_questions.question"],
-    });
-
-    if (!session) {
-      throw new NotFoundException("세션을 찾을 수 없습니다.");
-    }
-
-    const questions = session.session_questions.map((sq) => sq.question);
-
-    return await this.inferKeywordsForStt(questions);
-  }
-
-  async inferRoleFromJobText(jobText: string): Promise<InterviewJobRoleDto> {
-    try {
-      const response = await this.openai.chat.completions.create({
-        model: "gpt-5-nano",
-        messages: [
-          {
-            role: "system",
-            content: "당신의 임무는 채용공고로부터 직군명을 추정하는 것입니다.",
-          },
-          {
-            role: "user",
-            content: InterviewRolePrompt(jobText),
-          },
-        ],
-        reasoning_effort: "medium",
-        response_format: { type: "text" },
-      });
-
-      const content = response.choices[0].message.content;
-
-      if (!content) {
-        return {
-          status: "failed",
-        };
-      }
-
-      return {
-        status: "completed",
-        job_role: content,
-      };
-    } catch (error) {
-      return {
-        status: "failed",
-      };
-    }
-  }
-
-  async inferKeywordsForStt(questions: Question[]) {
-    try {
-      const response = await this.openai.responses.parse({
-        model: "gpt-5-mini",
-        input: [
-          {
-            role: "system",
-            content:
-              "당신은 STT(음성 인식) 성능을 높이기 위한 바이어스 키워드 리스트 생성기이다.",
-          },
-          {
-            role: "user",
-            content: SttKeywordPrompt(questions),
-          },
-        ],
-
-        text: {
-          format: sttKeywordFormat,
-        },
-        reasoning: { effort: "low" },
-      });
-
-      const parsed = response.output_parsed;
-
-      const safe = KeywordsForSttDtoSchema.safeParse(parsed);
-
-      if (!safe.success) {
-        console.error(safe.error);
-
-        return {
-          keywords: questions.map((q) => ({
-            id: q.id,
-            stt_keywords: [],
-          })),
-        };
-      }
-
-      const items = new Map(
-        safe.data.keywords.map((i) => [i.id, i.stt_keywords]),
-      );
-
-      const array = questions.map((q) => ({
-        id: q.id,
-        stt_keywords: items.get(q.id) ?? [],
-      }));
-
-      return { keywords: array };
-    } catch (error) {
-      console.error(error);
-
-      return {
-        keywords: questions.map((q) => ({ id: q.id, stt_keywords: [] })),
-      };
-    }
+    return { session_id: session.id };
   }
 
   // reset
-  async resetSession(sessionId: string) {
+  async resetSession(sessionId: string): Promise<SessionResponseDto> {
     const session = await this.sessionRepo.findOne({
       where: { id: sessionId },
       relations: ["session_questions", "session_questions.answers"],
@@ -332,7 +227,7 @@ export class InterviewSessionService {
               status: "pending",
               feedback_json: null,
               stt_json: null,
-              refined_words_json: null,
+              refined_json: null,
               voice_json: null,
               last_error: null,
             },
@@ -341,6 +236,6 @@ export class InterviewSessionService {
       }
     });
 
-    return { id: session.id, status: "not_started" };
+    return { session_id: session.id };
   }
 }

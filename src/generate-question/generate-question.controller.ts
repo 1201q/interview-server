@@ -26,6 +26,7 @@ import {
   CreateQuestionRequestDto,
   GenerateResponseDto,
   GQRequestResponseDto,
+  InsertQuestionsBodyDto,
 } from "./generate-question.dto";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { FlaskServerService } from "../external-server/flask-server.service";
@@ -42,37 +43,24 @@ export class GenerateQuestionController {
     private readonly flaskServerService: FlaskServerService,
   ) {}
 
-  @Post()
-  @ApiOperation({ summary: "이력서 및 채용공고 기반 질문 생성 요청" })
-  @ApiResponse({
-    status: HttpStatus.CREATED,
-    description: "요청이 생성되고 처리 시작.",
-    type: GenerateResponseDto,
-  })
-  @HttpCode(HttpStatus.CREATED)
-  async createRequest(
-    @Body() createDto: CreateQuestionRequestDto,
-  ): Promise<GenerateResponseDto> {
-    return this.generateService.createQuestionRequest(createDto);
-  }
-
-  @Post("new")
-  @ApiOperation({ summary: "이력서 및 채용공고 기반 질문 요청 생성" })
+  @Post("create")
+  @ApiOperation({ summary: "질문 요청 생성" })
   @ApiResponse({
     status: HttpStatus.CREATED,
     description: "새로운 질문 생성 요청",
     type: GenerateResponseDto,
   })
   @HttpCode(HttpStatus.CREATED)
-  async createRequest2(
+  async createRequest(
     @Body() createDto: CreateQuestionRequestDto,
   ): Promise<GenerateResponseDto> {
     return this.generateService.createRequest(createDto);
   }
 
-  @Get("test/:id")
-  async test(
-    @Param("id") id: string,
+  @Get(":requestId/stream")
+  @ApiOperation({ summary: "질문 생성 시작" })
+  async stream(
+    @Param("requestId") requestId: string,
     @Query("mock") mock: string,
     @Res() res: Response,
   ) {
@@ -88,24 +76,37 @@ export class GenerateQuestionController {
     if (isMock) {
       await this.generateService.streamMockData(res);
     } else {
-      await this.generateService.streamQuestionGenerator(id, res);
+      await this.generateService.streamQuestionGenerator(requestId, res);
     }
   }
 
-  @Get(":id/questions")
+  @Get(":requestId/questions")
   @ApiOperation({ summary: "생성된 질문 목록 조회" })
-  @ApiParam({ name: "id", description: "GenerateRequest id" })
+  @ApiParam({ name: "requestId", description: "GenerateRequest id" })
   @ApiResponse({ status: HttpStatus.OK, description: "생성된 질문들 반환" })
-  async getGenerated(@Param("id") id: string) {
+  async getGenerated(@Param("requestId") id: string) {
     return this.generateService.getQuestions(id);
   }
 
-  @Get(":id/request")
+  @Get(":requestId/request")
   @ApiOperation({ summary: "request 조회" })
-  @ApiParam({ name: "id", description: "GenerateRequest id" })
+  @ApiParam({ name: "requestId", description: "GenerateRequest id" })
   @ApiResponse({ status: HttpStatus.OK, description: "request 반환" })
-  async getRequest(@Param("id") id: string): Promise<GQRequestResponseDto> {
+  async getRequest(
+    @Param("requestId") id: string,
+  ): Promise<GQRequestResponseDto> {
     return this.generateService.getRequest(id);
+  }
+
+  @Post(":requestId/insert")
+  @ApiOperation({ summary: "request에 질문 추가" })
+  @ApiParam({ name: "requestId", description: "GenerateRequest id" })
+  @ApiResponse({ status: HttpStatus.OK, description: "추가 성공" })
+  async insertQuestions(
+    @Param("requestId") id: string,
+    @Body() dto: InsertQuestionsBodyDto,
+  ) {
+    return this.generateService.insertQuestions(id, dto);
   }
 
   @Post("extract")
@@ -147,33 +148,5 @@ export class GenerateQuestionController {
     console.log(data);
 
     return { result: data.result };
-  }
-
-  @Post("/test/embedding")
-  @ApiOperation({ summary: "이력서 및 채용공고 기반 질문 생성 요청" })
-  @HttpCode(HttpStatus.CREATED)
-  async embedding(@Body() createDto: CreateQuestionRequestDto): Promise<any> {
-    return this.ai.saveToVectorStore({
-      resumeText: createDto.resume_text,
-      jobText: createDto.job_text,
-      requestId: "test-embedding2",
-    });
-  }
-
-  @Post("/test/summary")
-  @ApiOperation({ summary: "이력서 및 채용공고 기반 질문 생성 요청" })
-  @ApiBody({
-    schema: {
-      type: "object",
-      properties: {
-        requestId: {
-          type: "string",
-        },
-      },
-    },
-  })
-  @HttpCode(HttpStatus.CREATED)
-  async summary(@Body() dto: { requestId: string }): Promise<any> {
-    return this.generateService.summary(dto.requestId);
   }
 }

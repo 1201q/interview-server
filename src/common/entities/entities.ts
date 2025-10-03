@@ -2,12 +2,27 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
   ManyToOne,
   OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
+  Index,
+  UpdateDateColumn,
 } from "typeorm";
+import { Relation } from "typeorm";
+
+export type GenerateStatus = "pending" | "working" | "completed" | "failed";
+export type SessionStatus =
+  | "not_started"
+  | "in_progress"
+  | "completed"
+  | "expired";
+export type QAStatus = "pending" | "processing" | "completed" | "failed";
+export type AnswerStatus = "waiting" | "ready" | "answering" | "submitted";
 
 @Entity({ name: "generate_requests" })
+@Index("idx_generate_requests_status_created", ["status", "created_at"])
 export class GenerateRequest {
   @PrimaryGeneratedColumn("uuid")
   id: string;
@@ -19,21 +34,24 @@ export class GenerateRequest {
   job_text: string;
 
   @Column({ length: 36, nullable: true })
-  vector_id: string;
+  vector_id: string | null;
 
-  @Column({ default: "pending" })
-  status: "pending" | "working" | "completed" | "failed";
+  @Column({ type: "varchar2", length: 16, default: "pending" })
+  status: GenerateStatus;
 
   @CreateDateColumn()
   created_at: Date;
 
-  @OneToMany(() => Question, (question) => question.request, {
-    cascade: true,
-  })
+  @UpdateDateColumn({ type: "timestamp" })
+  updated_at: Date;
+
+  @OneToMany(() => Question, (question) => question.request, { cascade: true })
   questions: Question[];
 }
 
 @Entity({ name: "questions" })
+@Index("idx_questions_request", ["request"])
+@Index("idx_questions_section", ["section"])
 export class Question {
   @PrimaryGeneratedColumn("uuid")
   id: string;
@@ -43,17 +61,19 @@ export class Question {
   })
   request: GenerateRequest;
 
-  @Column({ length: 500 })
+  @Column({ length: 255 })
   text: string;
 
-  @Column()
+  @Column({ length: 16 })
   section: string;
 
-  @Column()
+  @Column({ length: 255 })
   based_on: string;
 }
 
 @Entity({ name: "sessions" })
+@Index("idx_sessions_user_status", ["user_id", "status"])
+@Index("idx_sessions_created", ["created_at"])
 export class InterviewSession {
   @PrimaryGeneratedColumn("uuid")
   id: string;
@@ -61,125 +81,143 @@ export class InterviewSession {
   @Column()
   user_id: string;
 
-  @Column({ default: "not_started" })
-  status: "not_started" | "in_progress" | "completed" | "expired";
+  @Column({ type: "varchar2", length: 16, default: "not_started" })
+  status: SessionStatus;
 
   @ManyToOne(() => GenerateRequest, { nullable: true, onDelete: "SET NULL" })
-  request: GenerateRequest;
+  request: GenerateRequest | null;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: "timestamp" })
   created_at: Date;
 
-  @OneToMany(() => SessionQuestion, (sq) => sq.session, {
-    cascade: true,
-  })
+  @UpdateDateColumn({ type: "timestamp" })
+  updated_at: Date;
+
+  @OneToMany(() => SessionQuestion, (sq) => sq.session, { cascade: true })
   session_questions: SessionQuestion[];
 
-  @Column({ default: "pending" })
-  rubric_gen_status: "pending" | "processing" | "completed" | "failed";
+  @Column({ type: "varchar2", length: 16, default: "pending" })
+  rubric_gen_status: QAStatus;
 
   @Column({ type: "json", nullable: true })
-  rubric_json: object;
+  rubric_json: object | null;
 
   @Column("clob", { nullable: true })
   rubric_last_error?: string | null;
 }
 
 @Entity({ name: "session_questions" })
+@Index("idx_session_questions_session", ["session"])
+@Index("idx_session_questions_question", ["question"])
+@Index("idx_session_questions_parent", ["parent"])
+@Index("idx_session_questions_order", ["order"])
 export class SessionQuestion {
   @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @ManyToOne(() => InterviewSession, (sess) => sess.session_questions, {
-    onDelete: "CASCADE",
-  })
+  @ManyToOne(() => InterviewSession, { onDelete: "CASCADE" })
   session: InterviewSession;
 
-  @ManyToOne(() => Question, { nullable: true })
-  question: Question;
+  @ManyToOne(() => Question, { nullable: true, onDelete: "SET NULL" })
+  question: Question | null;
+
+  @OneToMany(() => Answer, (a) => a.session_question)
+  answers: Answer[];
 
   @Column({ type: "float" })
   order: number;
 
-  @Column({ default: "main" })
+  @Column({ type: "varchar2", length: 16, default: "main" })
   type: "main" | "followup";
 
   @Column("clob", { nullable: true })
-  followup_text: string;
+  followup_text: string | null;
 
-  @ManyToOne(() => SessionQuestion, { nullable: true })
-  parent: SessionQuestion;
+  @ManyToOne(() => SessionQuestion, { nullable: true, onDelete: "CASCADE" })
+  parent: SessionQuestion | null;
 
-  @OneToMany(() => Answer, (ans) => ans.session_question, {
-    cascade: true,
-  })
-  answers: Answer[];
-
-  @Column({ default: "pending" })
-  rubric_status: "pending" | "processing" | "completed" | "failed";
+  @Column({ type: "varchar2", length: 16, default: "pending" })
+  rubric_status: QAStatus;
 
   @Column({ type: "json", nullable: true })
-  rubric_json: object;
+  rubric_json: object | null;
 
   @Column("clob", { nullable: true })
   rubric_last_error?: string | null;
+
+  @CreateDateColumn({ type: "timestamp" })
+  created_at: Date;
+
+  @UpdateDateColumn({ type: "timestamp" })
+  updated_at: Date;
 }
 
 @Entity({ name: "answers" })
+@Index("idx_answers_session_question", ["session_question"], { unique: true })
+@Index("idx_answers_status", ["status"])
 export class Answer {
   @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @ManyToOne(() => SessionQuestion, (sq) => sq.answers, { onDelete: "CASCADE" })
+  @ManyToOne(() => SessionQuestion, { onDelete: "CASCADE" })
   session_question: SessionQuestion;
 
-  @Column({ default: "waiting" })
-  status: "waiting" | "ready" | "answering" | "submitted";
+  @Column({ type: "varchar2", length: 16, default: "waiting" })
+  status: AnswerStatus;
+
+  @OneToOne(() => AnswerAnalysis, (a) => a.answer)
+  analysis?: Relation<AnswerAnalysis>;
 
   @Column("clob", { nullable: true })
-  text: string;
+  text: string | null;
 
-  @Column({ nullable: true })
-  audio_path: string;
-
-  @Column({ type: "timestamp", nullable: true })
-  started_at: Date;
+  @Column({ nullable: true, length: 255 })
+  audio_path: string | null;
 
   @Column({ type: "timestamp", nullable: true })
-  ended_at: Date;
+  started_at: Date | null;
 
-  @OneToMany(() => AnswerAnalysis, (ana) => ana.answer, {
-    cascade: true,
-  })
-  analyses: AnswerAnalysis[];
+  @Column({ type: "timestamp", nullable: true })
+  ended_at: Date | null;
+
+  @CreateDateColumn({ type: "timestamp" })
+  created_at: Date;
+
+  @UpdateDateColumn({ type: "timestamp" })
+  updated_at: Date;
 }
 
 @Entity({ name: "answer_analyses" })
+@Index("idx_answer_analyses_status", ["status"])
 export class AnswerAnalysis {
   @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @ManyToOne(() => Answer, { onDelete: "CASCADE", eager: true })
+  @OneToOne(() => Answer, { onDelete: "CASCADE" })
+  @JoinColumn()
   answer: Answer;
 
-  @Column({ default: "pending" })
-  status: "pending" | "processing" | "completed" | "failed";
+  @Column({ type: "varchar2", length: 16, default: "pending" })
+  status: QAStatus;
 
   @Column("json", { nullable: true })
-  feedback_json: object;
+  feedback_json: object | null;
 
   @Column("json", { nullable: true })
-  stt_json: object;
+  stt_json: object | null;
 
   @Column("json", { nullable: true })
-  refined_words_json: object;
+  refined_json: object | null;
 
   @Column("json", { nullable: true })
-  voice_json: object;
+  voice_json: object | null;
 
   @Column("clob", { nullable: true })
   last_error?: string | null;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: "timestamp" })
   created_at: Date;
+
+  @UpdateDateColumn({ type: "timestamp" })
+  updated_at: Date;
 }

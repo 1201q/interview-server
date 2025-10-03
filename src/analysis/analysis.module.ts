@@ -5,10 +5,6 @@ import { AnalysisController } from "./controllers/analysis.controller";
 import { ExternalServerModule } from "src/external-server/external-server.module";
 
 import { QueueModule } from "../external-server/queue.module";
-import { AudioCallbackController } from "./controllers/audio.callback.controller";
-import { AnswerAnalysisRepository } from "./repos/answer.analysis.repository";
-import { GateService } from "./services/gate.service";
-import { AnalysisOrchestratorService } from "./services/analysis.orchestrator.service";
 import { SttWorker } from "./workers/stt.worker";
 import { RefineWorker } from "./workers/refine.worker";
 import { FeedbackWorker } from "./workers/feedback.worker";
@@ -43,13 +39,10 @@ import { SttProducer } from "./producer/stt.producer";
     QueueModule,
     OpenaiModule,
   ],
-  controllers: [AnalysisController, AudioCallbackController],
+  controllers: [AnalysisController],
   providers: [
     AnalysisService,
     OciDBService,
-    AnswerAnalysisRepository,
-    GateService,
-    AnalysisOrchestratorService,
     SttWorker,
     RefineWorker,
     FeedbackWorker,

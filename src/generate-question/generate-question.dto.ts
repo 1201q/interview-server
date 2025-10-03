@@ -1,5 +1,13 @@
+import { MOCK_INSERT_QUESTIONS } from "@/common/constants/mock-insert-questions";
+import { QuestionSection } from "@/common/interfaces/common.interface";
 import { ApiProperty } from "@nestjs/swagger";
-import { IsNotEmpty, IsString } from "class-validator";
+import { Type } from "class-transformer";
+import {
+  ArrayNotEmpty,
+  IsNotEmpty,
+  IsString,
+  ValidateNested,
+} from "class-validator";
 
 export class CreateQuestionRequestDto {
   @ApiProperty({ description: "이력서 텍스트", type: String })
@@ -13,9 +21,40 @@ export class CreateQuestionRequestDto {
   job_text: string;
 }
 
+// insert
+
+export class QuestionItemDto {
+  @ApiProperty({ description: "text", format: "string" })
+  @IsString()
+  text: string;
+
+  @ApiProperty({ description: "based_on", type: "string" })
+  @IsString()
+  based_on: string;
+
+  @ApiProperty({
+    description: "section",
+    enum: ["basic", "experience", "job_related", "expertise"],
+  })
+  @IsString()
+  section: QuestionSection;
+}
+
+export class InsertQuestionsBodyDto {
+  @ApiProperty({
+    description: "추가할 질문 목록",
+    type: [QuestionItemDto],
+    default: MOCK_INSERT_QUESTIONS,
+  })
+  @ValidateNested({ each: true })
+  @Type(() => QuestionItemDto)
+  @ArrayNotEmpty()
+  questions: QuestionItemDto[];
+}
+
 export class GenerateResponseDto {
   @ApiProperty({ description: "생성 요청 ID", type: String })
-  id: string;
+  request_id: string;
 
   @ApiProperty({
     description: "요청 상태",
@@ -26,7 +65,7 @@ export class GenerateResponseDto {
 
 export class GQRequestResponseDto {
   @ApiProperty({ description: "생성 요청 ID", type: String })
-  id: string;
+  request_id: string;
 
   @ApiProperty({
     description: "상태",

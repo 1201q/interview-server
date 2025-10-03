@@ -7,14 +7,13 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 
-import { VectorStoreService } from "src/external-server/vector-store.service";
-
 import { DataSource, Repository } from "typeorm";
 import { Question, GenerateRequest } from "../common/entities/entities";
 import {
   CreateQuestionRequestDto,
   GenerateResponseDto,
   GQRequestResponseDto,
+  InsertQuestionsBodyDto,
 } from "./generate-question.dto";
 import OpenAI from "openai";
 import { ConfigService } from "@nestjs/config";
@@ -56,8 +55,6 @@ export class GenerateQuestionService {
     private readonly dataSource: DataSource,
     private readonly ai: OpenAIService,
 
-    private readonly vectorStoreService: VectorStoreService,
-
     @InjectRepository(GenerateRequest)
     private readonly requestRepo: Repository<GenerateRequest>,
 
@@ -72,7 +69,10 @@ export class GenerateQuestionService {
   async createQuestionRequest(
     dto: CreateQuestionRequestDto,
   ): Promise<GenerateResponseDto> {
-    const resultDto: GenerateResponseDto = { id: null, status: "failed" };
+    const resultDto: GenerateResponseDto = {
+      request_id: null,
+      status: "failed",
+    };
 
     await this.dataSource.transaction(async (manager) => {
       const request = manager.create(GenerateRequest, {
@@ -83,7 +83,7 @@ export class GenerateQuestionService {
 
       await manager.save(request);
 
-      resultDto.id = request.id;
+      resultDto.request_id = request.id;
 
       try {
         this.logger.log(`vector store에 업로드 중... ${request.id}`);
@@ -95,12 +95,6 @@ export class GenerateQuestionService {
         });
 
         console.log(vectorResult);
-
-        // await this.vectorStoreService.save(
-        //   dto.resume_text,
-        //   dto.job_text,
-        //   request.id,
-        // );
 
         const response = await this.questionGenerator(
           dto.resume_text,
@@ -132,11 +126,6 @@ export class GenerateQuestionService {
         request.status = "failed";
 
         await manager.save(request);
-        // await this.vectorStoreService
-        //   .deleteByRequestId(request.id)
-        //   .catch((e) => {
-        //     this.logger.warn(`fail: vector 삭제 실패 ${request.id}`, e.stack);
-        //   });
 
         throw new InternalServerErrorException("질문 생성 중 오류 발생.");
       }
@@ -166,19 +155,19 @@ export class GenerateQuestionService {
       section: q.section,
     }));
 
-    return { status: "ok", questions: result };
+    return { questions: result };
   }
 
-  async getRequest(id: string): Promise<GQRequestResponseDto> {
+  async getRequest(requestId: string): Promise<GQRequestResponseDto> {
     const request = await this.requestRepo.findOne({
-      where: { id },
+      where: { id: requestId },
     });
 
     if (!request) {
       throw new NotFoundException("해당 id의 생성 요청이 없습니다.");
     }
 
-    return { id: request.id, status: request.status };
+    return { request_id: request.id, status: request.status };
   }
 
   async questionGenerator(resume: string, job: string) {
@@ -419,7 +408,10 @@ export class GenerateQuestionService {
   async createRequest(
     dto: CreateQuestionRequestDto,
   ): Promise<GenerateResponseDto> {
-    const resultDto: GenerateResponseDto = { id: null, status: "failed" };
+    const resultDto: GenerateResponseDto = {
+      request_id: null,
+      status: "failed",
+    };
 
     await this.dataSource.transaction(async (manager) => {
       const request = manager.create(GenerateRequest, {
@@ -430,7 +422,7 @@ export class GenerateQuestionService {
 
       await manager.save(request);
 
-      resultDto.id = request.id;
+      resultDto.request_id = request.id;
 
       try {
         this.logger.log(`vector store에 업로드 중... ${request.id}`);
@@ -493,27 +485,24 @@ export class GenerateQuestionService {
     }, ms);
   }
 
-  async summary(requestId: string) {
-    const baseInput = [
-      {
-        role: "system" as const,
-        content: "당신은 한 기업의 면접관입니다.",
-      },
-      {
-        role: "user" as const,
-        content:
-          "이력서와 채용공고를 참고해서 해당 지원자의 강점과 약점을 분석해줘. 가급적 근거도 같이 달아줘. JSON만 출력해줘.",
-      },
-    ];
-
-    const res = await this.ai.chat({
-      model: "gpt-5",
-      input: baseInput,
-      tools: this.ai.withFileSearch(requestId),
-      reasoning: { effort: "low", summary: "detailed" },
-      text: { verbosity: "low" },
+  // insert
+  async insertQuestions(requestId: string, dto: InsertQuestionsBodyDto) {
+    const request = await this.requestRepo.findOne({
+      where: { id: requestId },
     });
 
-    return res;
+    const questions = dto.questions.map((q) =>
+      this.questionRepo.create({
+        request: request,
+        text: q.text,
+        based_on: q.based_on,
+        section: q.section,
+      }),
+    );
+
+    await this.questionRepo.save(questions);
+
+    request.status = "completed";
+    await this.requestRepo.save(request);
   }
 }

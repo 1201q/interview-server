@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   HttpCode,
@@ -19,11 +18,7 @@ import {
   ApiResponse,
   ApiParam,
 } from "@nestjs/swagger";
-import {
-  SubmitAnswerDto,
-  SubmitAnswerResponseDto,
-  UploadAudioDto,
-} from "./answer.dto";
+import { SubmitAnswerDto, SubmitAnswerResponseDto } from "./answer.dto";
 
 import { InterviewAnswerService } from "./answer.service";
 
@@ -32,10 +27,10 @@ import { InterviewAnswerService } from "./answer.service";
 export class InterviewAnswerController {
   constructor(private readonly answerService: InterviewAnswerService) {}
 
-  @Post(":sessionId/:questionId/start")
+  @Post(":sessionId/:sQuestionId/start")
   @ApiOperation({ summary: "질문 응답 시작" })
   @ApiParam({ name: "sessionId", description: "세션 ID" })
-  @ApiParam({ name: "questionId", description: "세션 질문 ID" })
+  @ApiParam({ name: "sQuestionId", description: "세션 질문 ID" })
   @ApiResponse({
     status: HttpStatus.NO_CONTENT,
     description: "응답이 시작되었습니다.",
@@ -43,47 +38,17 @@ export class InterviewAnswerController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async start(
     @Param("sessionId") sessionId: string,
-    @Param("questionId") questionId: string,
+    @Param("sQuestionId") sQuestionId: string,
   ) {
-    await this.answerService.startAnswer(sessionId, questionId);
+    await this.answerService.startAnswer(sessionId, sQuestionId);
   }
 
-  @Post(":sessionId/:questionId/submit")
-  @ApiOperation({ summary: "응답 제출 및 다음 질문 준비" })
-  @ApiParam({ name: "sessionId", description: "세션 ID" })
-  @ApiParam({ name: "questionId", description: "세션 질문 ID" })
-  @ApiConsumes("multipart/form-data")
-  @UseInterceptors(FileInterceptor("audio"))
-  @ApiBody({ type: SubmitAnswerDto })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    type: SubmitAnswerResponseDto,
-  })
-  async submit(
-    @Param("sessionId") sessionId: string,
-    @Param("questionId") questionId: string,
-    @UploadedFile() file: Express.Multer.File,
-    @Body() body: SubmitAnswerDto,
-  ): Promise<SubmitAnswerResponseDto> {
-    if (!file) {
-      throw new BadRequestException("audio 파일이 필요합니다.");
-    }
-
-    const nextQuestion = await this.answerService.submitAnswer(
-      sessionId,
-      questionId,
-      file,
-      body.answerText,
-    );
-    return nextQuestion;
-  }
-
-  @Post(":sessionId/:questionId/submit/test")
+  @Post(":sessionId/:sQuestionId/submit")
   @ApiOperation({
-    summary: "응답 제출 및 다음 질문 준비 (테스트 - 꼬리질문 판별 x)",
+    summary: "응답 제출 및 다음 질문 준비 (꼬리질문 판별 x)",
   })
   @ApiParam({ name: "sessionId", description: "세션 ID" })
-  @ApiParam({ name: "questionId", description: "세션 질문 ID" })
+  @ApiParam({ name: "sQuestionId", description: "세션 질문 ID" })
   @ApiConsumes("multipart/form-data")
   @UseInterceptors(FileInterceptor("audio"))
   @ApiBody({
@@ -93,42 +58,20 @@ export class InterviewAnswerController {
     status: HttpStatus.OK,
     type: SubmitAnswerResponseDto,
   })
-  async testSubmit(
+  async submit(
     @Param("sessionId") sessionId: string,
-    @Param("questionId") questionId: string,
+    @Param("sQuestionId") sQuestionId: string,
     @UploadedFile() file: Express.Multer.File | null,
     @Body() body: SubmitAnswerDto,
   ): Promise<SubmitAnswerResponseDto> {
-    const nextQuestion = await this.answerService.testSubmitAnswer(
+    const nextQuestion = await this.answerService.submitAnswer({
       sessionId,
-      questionId,
-      file ?? null,
-      body.answerText,
-    );
+      sQuestionId,
+      audio: file,
+      text: body.answerText,
+      decideFollowup: false,
+    });
 
     return nextQuestion;
-  }
-
-  @Post("/upload/test")
-  @ApiOperation({
-    summary: "음성 업로드 테스트",
-  })
-  @ApiConsumes("multipart/form-data")
-  @UseInterceptors(FileInterceptor("audio"))
-  @ApiBody({ type: UploadAudioDto })
-  @ApiResponse({
-    status: HttpStatus.OK,
-  })
-  async testUpload(
-    @UploadedFile() file: Express.Multer.File,
-    @Body() body: UploadAudioDto,
-  ) {
-    if (!file) {
-      throw new BadRequestException("audio 파일이 필요합니다.");
-    }
-
-    const res = await this.answerService.testUpload(file);
-
-    return res;
   }
 }

@@ -18,7 +18,6 @@ import { AnalysisModule } from "@/analysis/analysis.module";
   imports: [
     TypeOrmModule.forFeature([Answer, AnswerAnalysis]),
     AuthModule,
-
     SessionQuestionModule,
     InterviewSessionModule,
     FollwupModule,

@@ -2,23 +2,10 @@ import { Injectable, InternalServerErrorException } from "@nestjs/common";
 
 import axios from "axios";
 import { ConfigService } from "@nestjs/config";
-import OpenAI from "openai";
-import {
-  RefineTextPrompt,
-  RefineTextPromptV2,
-} from "src/common/prompts/refine.prompt";
-import { SttBiasPrompt } from "src/common/prompts/stt-bias-prompt";
-import { RefineResponseDto } from "./transcribe.dto";
 
 @Injectable()
 export class TranscribeService {
-  private openai: OpenAI;
-
-  constructor(private readonly config: ConfigService) {
-    this.openai = new OpenAI({
-      apiKey: this.config.get("OPENAI_API_KEY"),
-    });
-  }
+  constructor(private readonly config: ConfigService) {}
 
   async createRealtimeSession() {
     try {
@@ -95,42 +82,6 @@ export class TranscribeService {
       throw new InternalServerErrorException(
         `${error.message}: OpenAI 세션 발급 실패`,
       );
-    }
-  }
-
-  async refineTranscript(
-    context: string,
-    transcript: string,
-  ): Promise<RefineResponseDto> {
-    try {
-      const response = await this.openai.chat.completions.create({
-        model: "gpt-5",
-        messages: [
-          {
-            role: "system",
-            content:
-              "당신은 한국어 STT 보정기다. 오탈자/전문용어/구두점만 최소 수정하고, 어투/의미/어순/단어 수는 유지한다.",
-          },
-          { role: "user", content: RefineTextPromptV2(context, transcript) },
-        ],
-        reasoning_effort: "minimal",
-        presence_penalty: 0,
-        frequency_penalty: 0,
-        response_format: { type: "text" },
-      });
-
-      const result = response.choices[0].message.content;
-
-      return {
-        text: result,
-        status: "completed",
-      };
-    } catch (error) {
-      console.error(error);
-
-      return {
-        status: "failed",
-      };
     }
   }
 }

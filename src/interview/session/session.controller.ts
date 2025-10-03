@@ -6,7 +6,6 @@ import {
   HttpStatus,
   Param,
   Post,
-  Query,
   Req,
 } from "@nestjs/common";
 
@@ -20,13 +19,10 @@ import {
 import { InterviewSessionService } from "./session.service";
 
 import {
-  CreateInterviewSessionDto,
-  InterviewSessionDetailDto,
-  GenerateResponseDto,
-  InterviewJobRoleDto,
-  KeywordsForSttDto,
   CreateInterviewSessionBodyDto,
-  StartSessionResponseDto,
+  SessionResponseDto,
+  SessionDetailDto,
+  SessionRubricDto,
 } from "./session.dto";
 
 import { Request } from "express";
@@ -43,29 +39,22 @@ export class InterviewSessionController {
   @Get(":sessionId")
   @ApiOperation({ summary: "세션 상세 조회" })
   @ApiParam({ name: "sessionId", description: "Session ID" })
-  @ApiResponse({ status: HttpStatus.OK, type: InterviewSessionDetailDto })
-  getDetail(@Param("sessionId") id: string) {
-    return this.sessionService.getSessionDetail(id);
+  @ApiResponse({ status: HttpStatus.OK, type: SessionDetailDto })
+  getDetail(@Param("sessionId") sessionId: string) {
+    return this.sessionService.getSessionDetail(sessionId);
   }
 
-  // reset = test
-
-  @Post(":sessionId/reset")
-  @ApiOperation({
-    summary: "해당 면접 세션 정보를 초기화",
-  })
+  @Get(":sessionId/rubric")
+  @ApiOperation({ summary: "세션 rubric 조회" })
   @ApiParam({ name: "sessionId", description: "Session ID" })
-  @ApiResponse({ status: HttpStatus.OK, type: StartSessionResponseDto })
-  async reset(@Param("sessionId") sessionId: string) {
-    return this.sessionService.resetSession(sessionId);
+  @ApiResponse({ status: HttpStatus.OK, type: SessionRubricDto })
+  getSessionRubric(@Param("sessionId") sessionId: string) {
+    return this.sessionService.getSessionRubric(sessionId);
   }
 
-  //
-
-  ///////////////////// create
   @Post("create")
   @ApiOperation({ summary: "새 면접 세션 생성" })
-  @ApiResponse({ status: HttpStatus.CREATED, type: GenerateResponseDto })
+  @ApiResponse({ status: HttpStatus.CREATED, type: SessionResponseDto })
   @ApiCookieAuth("accessToken")
   @HttpCode(HttpStatus.CREATED)
   async create(
@@ -83,7 +72,7 @@ export class InterviewSessionController {
 
   @Post("create/test")
   @ApiOperation({ summary: "새 면접 세션 생성 (테스트)" })
-  @ApiResponse({ status: HttpStatus.CREATED, type: GenerateResponseDto })
+  @ApiResponse({ status: HttpStatus.CREATED, type: SessionResponseDto })
   @HttpCode(HttpStatus.CREATED)
   testCreate(@Body() body: CreateInterviewSessionBodyDto) {
     const TEST_USER_ID = "88906d3d-8204-487b-93db-b4d436fca1df";
@@ -92,42 +81,22 @@ export class InterviewSessionController {
       user_id: TEST_USER_ID,
     });
   }
-  ///////////////////// create
 
   @Post(":sessionId/start")
   @ApiOperation({ summary: "면접 세션 시작" })
   @ApiParam({ name: "sessionId", description: "Session ID" })
-  @ApiResponse({ status: HttpStatus.OK, type: StartSessionResponseDto })
+  @ApiResponse({ status: HttpStatus.OK, type: SessionResponseDto })
   startSession(@Param("sessionId") sessionId: string) {
     return this.sessionService.startSession(sessionId);
   }
 
-  @Post(":sessionId/role")
+  @Post(":sessionId/reset")
   @ApiOperation({
-    summary: "해당 면접 세션의 직군을 생성",
+    summary: "해당 면접 세션 정보를 초기화",
   })
   @ApiParam({ name: "sessionId", description: "Session ID" })
-  @ApiResponse({ status: HttpStatus.OK, type: InterviewJobRoleDto })
-  async getJobRoleFromSessionId(@Param("sessionId") sessionId: string) {
-    return this.sessionService.getJobRoleFromSessionId(sessionId);
-  }
-
-  @Post("role")
-  @ApiOperation({
-    summary: "해당 면접 세션의 직군을 생성",
-  })
-  @ApiResponse({ status: HttpStatus.OK, type: InterviewJobRoleDto })
-  async getJobRoleFromJobText(@Query("jobText") jobText: string) {
-    return this.sessionService.getJobRoleFromJobText(jobText);
-  }
-
-  @Post(":sessionId/keywords")
-  @ApiOperation({
-    summary: "해당 면접 세션의 STT 프롬프트에 사용할 키워드를 생성",
-  })
-  @ApiParam({ name: "sessionId", description: "Session ID" })
-  @ApiResponse({ status: HttpStatus.OK, type: KeywordsForSttDto })
-  getKeywordsForStt(@Param("sessionId") sessionId: string) {
-    return this.sessionService.getKeywordsForStt(sessionId);
+  @ApiResponse({ status: HttpStatus.OK, type: SessionResponseDto })
+  async reset(@Param("sessionId") sessionId: string) {
+    return this.sessionService.resetSession(sessionId);
   }
 }

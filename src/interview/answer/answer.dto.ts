@@ -1,16 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsOptional, IsUUID } from "class-validator";
 import { IsString } from "class-validator";
-
-export class StartAnswerDto {
-  @ApiProperty({ description: "면접 세션 ID", format: "uuid" })
-  @IsUUID()
-  sessionId: string;
-
-  @ApiProperty({ description: "세션 질문 ID", format: "uuid" })
-  @IsUUID()
-  questionId: string;
-}
 
 export class UploadAudioDto {
   @ApiProperty({
