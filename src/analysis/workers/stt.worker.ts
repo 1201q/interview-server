@@ -6,7 +6,7 @@ import { DataSource } from "typeorm";
 import { Answer, AnswerAnalysis } from "@/common/entities/entities";
 import { OciDBService } from "@/external-server/oci-db.service";
 import axios from "axios";
-import { OpenAIService } from "@/openai/openai.service";
+import { OpenAIService } from "@/llm/openai.service";
 
 type MulterLike = Pick<
   Express.Multer.File,

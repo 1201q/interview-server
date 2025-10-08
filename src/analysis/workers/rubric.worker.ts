@@ -9,7 +9,7 @@ import type { Job, Queue } from "bullmq";
 
 import { DataSource } from "typeorm";
 import { InterviewSession, SessionQuestion } from "@/common/entities/entities";
-import { AnalysisService } from "../services/analysis.service";
+import { AnalysisService } from "../analysis.service";
 import { GenerateRubricDto } from "../analysis.dto";
 import Redis from "ioredis";
 

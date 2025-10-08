@@ -4,7 +4,6 @@ import { BullBoardModule } from "@bull-board/nestjs";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { ExpressAdapter } from "@bull-board/express";
 import { ConfigModule, ConfigService } from "@nestjs/config";
-
 import { FlowProducer } from "bullmq";
 
 @Global()
@@ -26,29 +25,20 @@ import { FlowProducer } from "bullmq";
       { name: "refine" },
       { name: "feedback" },
       { name: "audio" },
+      { name: "analysis" },
     ),
+    BullModule.registerFlowProducer({ name: "analysisFlow" }),
     BullBoardModule.forRoot({
       route: "/admin/queues",
       adapter: ExpressAdapter,
     }),
     BullBoardModule.forFeature(
+      { name: "analysis", adapter: BullMQAdapter },
       { name: "rubric", adapter: BullMQAdapter },
-      {
-        name: "stt",
-        adapter: BullMQAdapter,
-      },
-      {
-        name: "refine",
-        adapter: BullMQAdapter,
-      },
-      {
-        name: "feedback",
-        adapter: BullMQAdapter,
-      },
-      {
-        name: "audio",
-        adapter: BullMQAdapter,
-      },
+      { name: "stt", adapter: BullMQAdapter },
+      { name: "refine", adapter: BullMQAdapter },
+      { name: "feedback", adapter: BullMQAdapter },
+      { name: "audio", adapter: BullMQAdapter },
     ),
   ],
   providers: [

@@ -18,7 +18,6 @@ import { FollowupService } from "../followup/followup.service";
 import { SubmitAnswerResponseDto } from "./answer.dto";
 import { FlaskServerService } from "src/external-server/flask-server.service";
 import { OciDBService } from "src/external-server/oci-db.service";
-import { SttProducer } from "@/analysis/producer/stt.producer";
 
 type SubmitAnswerInput = {
   sessionId: string;
@@ -44,8 +43,6 @@ export class InterviewAnswerService {
 
     private readonly flaskService: FlaskServerService,
     private readonly ociUploadService: OciDBService,
-
-    private readonly sttProducer: SttProducer,
   ) {}
 
   async startAnswer(sessionId: string, questionId: string): Promise<void> {
@@ -220,13 +217,13 @@ export class InterviewAnswerService {
       needEnqueueSTT = true;
     }
 
-    if (needEnqueueSTT && submittedAnswerId) {
-      try {
-        await this.sttProducer.enqueueSTT(submittedAnswerId);
-      } catch (error) {
-        this.logger.error(`STT 작업 큐잉 중 오류 발생: ${error.message}`);
-      }
-    }
+    // if (needEnqueueSTT && submittedAnswerId) {
+    //   try {
+    //     await this.sttProducer.enqueueSTT(submittedAnswerId);
+    //   } catch (error) {
+    //     this.logger.error(`STT 작업 큐잉 중 오류 발생: ${error.message}`);
+    //   }
+    // }
 
     return result;
   }

@@ -32,7 +32,7 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import { FlaskServerService } from "../external-server/flask-server.service";
 import { Response } from "express";
 
-import { OpenAIService } from "@/openai/openai.service";
+import { OpenAIService } from "@/llm/openai.service";
 
 @ApiTags("이력서 생성")
 @Controller("generate-question")

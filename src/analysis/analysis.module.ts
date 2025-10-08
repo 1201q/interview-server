@@ -1,14 +1,10 @@
 import { Module } from "@nestjs/common";
 import { AuthModule } from "src/auth/auth.module";
-import { AnalysisService } from "./services/analysis.service";
-import { AnalysisController } from "./controllers/analysis.controller";
+import { AnalysisService } from "./analysis.service";
+import { AnalysisController } from "./analysis.controller";
 import { ExternalServerModule } from "src/external-server/external-server.module";
 
 import { QueueModule } from "../external-server/queue.module";
-import { SttWorker } from "./workers/stt.worker";
-import { RefineWorker } from "./workers/refine.worker";
-import { FeedbackWorker } from "./workers/feedback.worker";
-import { AudioWorker } from "./workers/audio.worker";
 import { OciDBService } from "src/external-server/oci-db.service";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import {
@@ -19,10 +15,11 @@ import {
   Question,
   SessionQuestion,
 } from "src/common/entities/entities";
-import { OpenaiModule } from "@/openai/openai.module";
-import { RubricProducer } from "./producer/rubric.producer";
-import { RubricWorker } from "./workers/rubric.worker";
-import { SttProducer } from "./producer/stt.producer";
+import { OpenaiModule } from "@/llm/openai.module";
+
+import { AnalysisCallbackController } from "./analysis.callback.controller";
+import { AnalysisFlowService } from "./analysis.flow.service";
+import { AnalysisWorker } from "./analysis.worker";
 
 @Module({
   imports: [
@@ -39,18 +36,13 @@ import { SttProducer } from "./producer/stt.producer";
     QueueModule,
     OpenaiModule,
   ],
-  controllers: [AnalysisController],
+  controllers: [AnalysisController, AnalysisCallbackController],
   providers: [
-    AnalysisService,
     OciDBService,
-    SttWorker,
-    RefineWorker,
-    FeedbackWorker,
-    AudioWorker,
-    RubricProducer,
-    RubricWorker,
-    SttProducer,
+    AnalysisService,
+    AnalysisFlowService,
+    AnalysisWorker,
   ],
-  exports: [AnalysisService, RubricProducer, SttProducer],
+  exports: [AnalysisService, AnalysisFlowService],
 })
 export class AnalysisModule {}

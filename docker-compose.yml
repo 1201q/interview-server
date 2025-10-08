@@ -41,6 +41,7 @@ services:
       - "443:443"
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt
+      - /var/www/certbot:/var/www/certbot
       - ./nginx.conf:/etc/nginx/nginx.conf
     depends_on:
       - app
@@ -49,6 +50,13 @@ services:
       - app-network
     environment:
       - TZ=Asia/Seoul
+    platform: linux/arm64
+  certbot:
+    image: certbot/certbot:latest
+    container_name: certbot
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - /var/www/certbot:/var/www/certbot
     platform: linux/arm64
   redis:
     image: redis:latest

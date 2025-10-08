@@ -36,7 +36,7 @@ import { pick } from "stream-json/filters/Pick";
 import { streamArray } from "stream-json/streamers/StreamArray";
 import { zodTextFormat } from "openai/helpers/zod";
 
-import { OpenAIService } from "@/openai/openai.service";
+import { OpenAIService } from "@/llm/openai.service";
 
 type WriteEventOpts = {
   id?: string | number;

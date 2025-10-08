@@ -194,11 +194,17 @@ export class AnswerAnalysis {
   id: string;
 
   @OneToOne(() => Answer, { onDelete: "CASCADE" })
-  @JoinColumn()
+  @JoinColumn({ name: "answer_id" })
   answer: Answer;
 
   @Column({ type: "varchar2", length: 16, default: "pending" })
   status: QAStatus;
+
+  @Column({ type: "number", default: 0 })
+  progress: number;
+
+  @Column({ type: "varchar", length: 64, nullable: true })
+  bull_job_id: string | null;
 
   @Column("json", { nullable: true })
   feedback_json: object | null;
