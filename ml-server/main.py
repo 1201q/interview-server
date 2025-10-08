@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import os, tempfile
 from werkzeug.utils import secure_filename
 from urllib.parse import urljoin
-
+import requests
 
 from io import BytesIO
 from convert import convert_to_seekable_webm, webm_to_wav_bytes
@@ -208,6 +208,79 @@ def extract_text():
 
         traceback.print_exc()
         return jsonify({"message": str(e)}), 500
+
+
+@app.post("/analyze")
+def analyze():
+    body = request.get_json()
+    source = body["source"]  # {"type":"url","url":"..."} or {"type":"inline"}
+
+    audio_bytes = None
+    mimetype = None
+
+    if source["type"] == "url":
+        r = requests.get(source["url"], stream=True, timeout=30)
+        r.raise_for_status()
+        audio_bytes = r.content
+        mimetype = r.headers.get("Content-Type", "application/octet-stream")
+    elif source["type"] == "inline":
+        audio_bytes = source.get("audio_bytes")
+        mimetype = source.get("mimetype", "application/octet-stream")
+
+    print(source)
+    print(mimetype)
+
+    if not audio_bytes:
+        return jsonify({"error": "오디오 데이터가 없습니다."}), 400
+
+    def _sniff_audio_kind(b: bytes):
+        # WAV: RIFF....WAVE
+        if len(b) >= 12 and b[:4] == b"RIFF" and b[8:12] == b"WAVE":
+            return "wav"
+        # WebM: EBML 헤더 + 'webm' DocType 흔적
+        if len(b) >= 4 and b[:4] == bytes([0x1A, 0x45, 0xDF, 0xA3]):
+            if b"webm" in b[:4096].lower():
+                return "webm"
+        return None
+
+    kind = _sniff_audio_kind(audio_bytes)
+
+    try:
+        if kind == "wav":
+            wav_bytes = audio_bytes
+        elif kind == "webm" or mimetype in (
+            "audio/webm",
+            "video/webm",
+            "application/octet-stream",
+        ):
+            wav_bytes = webm_to_wav_bytes(audio_bytes)
+        else:
+            raise ValueError(
+                f"지원하지 않는 오디오 형식: kind={kind}, mimetype={mimetype}"
+            )
+    except Exception as e:
+        app.logger.exception("webm 변환 실패")
+        return jsonify({"error": "webm→wav 변환 실패", "message": str(e)}), 500
+
+    segmentation = request.args.get("segmentation", "adaptive")
+    model = load_filler_model(model_path)
+
+    params = None
+    if request.is_json:
+        body = request.get_json(silent=True) or {}
+        params = body.get("params")
+
+    try:
+        result = faster_run_filler_analysis_bytes(
+            audio_bytes=wav_bytes,
+            model=model,
+            segmentation=segmentation,
+            params=params,
+        )
+        return jsonify(result)
+    except Exception as e:
+        app.logger.exception("voice_metrics error")
+        return jsonify({"error": "서버 내부 오류", "message": str(e)}), 500
 
 
 if __name__ == "__main__":

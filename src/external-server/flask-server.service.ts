@@ -33,6 +33,28 @@ export class FlaskServerService {
     return Buffer.from(response.data);
   }
 
+  async getAnalysisFromObjectName(objectName: string) {
+    const baseUrl = this.configService.get<string>("ML_SERVER_URL");
+    const presignedUrl = await this.oci.generatePresignedUrl(objectName);
+
+    const body = {
+      source: {
+        type: "url",
+        url: presignedUrl,
+      },
+    };
+
+    const response = await lastValueFrom(
+      this.httpService.post(`${baseUrl}/analyze`, body, {
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    console.log(response.data);
+
+    return response.data;
+  }
+
   async getVoiceMetrics(webm: Express.Multer.File) {
     const baseUrl = this.configService.get<string>("ML_SERVER_URL");
 

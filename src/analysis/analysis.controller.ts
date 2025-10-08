@@ -12,7 +12,7 @@ import { ApiConsumes, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { RubricDto, STTRequestDto } from "./analysis.dto";
 import { AnalysisService } from "./analysis.service";
 import { FileInterceptor } from "@nestjs/platform-express";
-import { FlaskServerService } from "src/external-server/flask-server.service";
+
 import { AnalysisFlowService } from "./analysis.flow.service";
 import { InjectRepository } from "@nestjs/typeorm";
 import { AnswerAnalysis } from "@/common/entities/entities";

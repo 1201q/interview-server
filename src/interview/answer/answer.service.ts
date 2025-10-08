@@ -96,7 +96,7 @@ export class InterviewAnswerService {
         const answerRepo = manager.getRepository(Answer);
         const sqRepo = manager.getRepository(SessionQuestion);
 
-        // 2. 제출 대상 Answer의 세션까지 확인하여 잠금 (중복 제출/경합 방지)
+        // 2. 제출 대상 Answer
         const answer = await answerRepo.findOne({
           where: {
             session_question: { id: sQuestionId, session: { id: sessionId } },
@@ -106,8 +106,9 @@ export class InterviewAnswerService {
             "session_question.session",
             "session_question.question",
           ],
-          lock: { mode: "pessimistic_write" },
         });
+
+        console.log(answer);
 
         if (!answer) throw new NotFoundException("해당 answer가 없습니다.");
 
@@ -140,7 +141,6 @@ export class InterviewAnswerService {
         const analysisRepo = manager.getRepository(AnswerAnalysis);
         let analysis = await analysisRepo.findOne({
           where: { answer: { id: answer.id } },
-          lock: { mode: "pessimistic_write" },
         });
 
         if (!analysis) {
@@ -187,7 +187,6 @@ export class InterviewAnswerService {
           // 다음 질문 answer를 조회. ready로 변경
           const nextAnswer = await answerRepo.findOne({
             where: { session_question: { id: nextQuestion.id } },
-            lock: { mode: "pessimistic_write" },
           });
 
           if (nextAnswer && nextAnswer.status === "waiting") {

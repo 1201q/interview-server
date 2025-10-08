@@ -65,8 +65,9 @@ export class AnalysisFlowService {
       ],
     });
 
+    const childrenArray = tree.children ?? [];
     const childIds = Object.fromEntries(
-      tree.children.map((c) => [c.children, c.job.id]),
+      childrenArray.map((node) => [node.job.name, node.job.id]),
     );
 
     console.log(childIds);
