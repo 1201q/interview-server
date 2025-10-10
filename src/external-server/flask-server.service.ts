@@ -50,8 +50,6 @@ export class FlaskServerService {
       }),
     );
 
-    console.log(response.data);
-
     return response.data;
   }
 
@@ -69,8 +67,6 @@ export class FlaskServerService {
         headers: form.getHeaders(),
       }),
     );
-
-    console.log(response.data);
 
     return response.data;
   }

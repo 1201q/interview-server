@@ -43,7 +43,7 @@ export class ChatgptService {
         parallel_tool_calls: opts?.parallel_tool_calls,
       });
 
-      return { res: res, result: JSON.parse(res.output_text) };
+      return { res: res, result: res.output_text };
     } catch (error) {
       this.logger.error("Error calling ChatGPT", error);
       throw new InternalServerErrorException("Failed to call ChatGPT");

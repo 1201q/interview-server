@@ -104,6 +104,9 @@ export class InterviewSession {
 
   @Column("clob", { nullable: true })
   rubric_last_error?: string | null;
+
+  @Column({ type: "varchar2", length: 30, nullable: true })
+  role_guess: string | null;
 }
 
 @Entity({ name: "session_questions" })

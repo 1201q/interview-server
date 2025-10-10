@@ -35,6 +35,11 @@ export class NextQuestionDto {
   text: string | null;
 }
 
+export class TestNextQuestionDto extends NextQuestionDto {
+  @ApiProperty({ description: "다음 질문 ID", format: "uuid", nullable: true })
+  answerId: string | null;
+}
+
 export class SubmitAnswerResponseDto {
   @ApiProperty({
     description: "다음 질문",
@@ -42,6 +47,18 @@ export class SubmitAnswerResponseDto {
     nullable: true,
   })
   next: NextQuestionDto;
+
+  @ApiProperty({ description: "세션 완료 여부", default: false })
+  finished: boolean;
+}
+
+export class TestSubmitAnswerResponseDto {
+  @ApiProperty({
+    description: "다음 질문",
+    type: TestNextQuestionDto,
+    nullable: true,
+  })
+  next: TestNextQuestionDto;
 
   @ApiProperty({ description: "세션 완료 여부", default: false })
   finished: boolean;

@@ -17,9 +17,10 @@ import {
 } from "src/common/entities/entities";
 import { OpenaiModule } from "@/llm/openai.module";
 
-import { AnalysisCallbackController } from "./analysis.callback.controller";
 import { AnalysisFlowService } from "./analysis.flow.service";
 import { AnalysisWorker } from "./analysis.worker";
+import { SessionPrepFlowService } from "./session-prep.flow.service";
+import { SessionPrepWorker } from "./session-prep.worker";
 
 @Module({
   imports: [
@@ -36,13 +37,15 @@ import { AnalysisWorker } from "./analysis.worker";
     QueueModule,
     OpenaiModule,
   ],
-  controllers: [AnalysisController, AnalysisCallbackController],
+  controllers: [AnalysisController],
   providers: [
     OciDBService,
     AnalysisService,
     AnalysisFlowService,
     AnalysisWorker,
+    SessionPrepFlowService,
+    SessionPrepWorker,
   ],
-  exports: [AnalysisService, AnalysisFlowService],
+  exports: [AnalysisService, AnalysisFlowService, SessionPrepFlowService],
 })
 export class AnalysisModule {}

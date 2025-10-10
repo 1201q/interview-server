@@ -13,3 +13,14 @@ export const RubricResponseSchema = z
     rubric: z.array(RubricSchema),
   })
   .strict();
+
+export type Rubric = z.infer<typeof RubricSchema>;
+
+export function isRubric(x: unknown): x is Rubric {
+  return RubricSchema.safeParse(x).success;
+}
+
+export const RubricArraySchema = z.array(RubricSchema);
+export function isRubricArray(x: unknown): x is Rubric[] {
+  return RubricArraySchema.safeParse(x).success;
+}

@@ -5,11 +5,16 @@ import type { Job } from "bullmq";
 import { DataSource, Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Injectable, Logger } from "@nestjs/common";
-import { Answer, AnswerAnalysis } from "@/common/entities/entities";
+import {
+  Answer,
+  AnswerAnalysis,
+  InterviewSession,
+} from "@/common/entities/entities";
 import { AnalysisService } from "./analysis.service";
 import { OciDBService } from "@/external-server/oci-db.service";
 import axios from "axios";
 import { FlaskServerService } from "@/external-server/flask-server.service";
+import { FeedbackDto } from "./analysis.dto";
 type Progress = {
   stt: number;
   refine: number;
@@ -23,7 +28,7 @@ type MulterLike = Pick<
 >;
 
 @Injectable()
-@Processor("analysis")
+@Processor("analysis", { concurrency: 4 })
 export class AnalysisWorker extends WorkerHost {
   private readonly logger = new Logger(AnalysisWorker.name);
 
@@ -32,6 +37,9 @@ export class AnalysisWorker extends WorkerHost {
 
     @InjectRepository(AnswerAnalysis)
     private readonly repo: Repository<AnswerAnalysis>,
+
+    @InjectRepository(InterviewSession)
+    private readonly sessionRepo: Repository<InterviewSession>,
 
     private readonly analysisService: AnalysisService,
     private readonly ociService: OciDBService,
@@ -52,18 +60,41 @@ export class AnalysisWorker extends WorkerHost {
     });
   }
 
-  private async isRubricReady(sessionId: string) {
-    return false;
+  private async getFeedbackDto(
+    sessionId: string,
+    answerId: string,
+  ): Promise<FeedbackDto | null> {
+    const dto = new FeedbackDto();
+
+    const session = await this.sessionRepo.findOne({
+      where: { id: sessionId },
+      relations: ["request"],
+    });
+
+    const analysis = await this.getAnalysis(answerId);
+
+    if (!session?.request || !session.request.vector_id || !analysis)
+      return null;
+
+    dto.vectorId = session.request.vector_id;
+    dto.questionText = analysis.answer.session_question.question.text;
+    dto.rubric = analysis.answer.session_question.rubric_json;
+    dto.segments = (analysis.refined_json as any[]) || [];
+
+    return dto;
   }
 
-  // == 유틸 진행률 저장 ==
-  private async setDbProgress(parentJobId: string, p: number) {
-    await this.repo
-      .createQueryBuilder()
-      .update(AnswerAnalysis)
-      .set({ progress: p })
-      .where("bull_job_id = :parentJobId", { parentJobId })
-      .execute();
+  private async isSessionReady(sessionId: string) {
+    const row = await this.ds.getRepository(InterviewSession).findOne({
+      where: { id: sessionId },
+      select: ["rubric_gen_status", "role_guess"],
+    });
+
+    return (
+      row?.rubric_gen_status === "completed" &&
+      !!row?.role_guess &&
+      row.role_guess.trim().length > 0
+    );
   }
 
   async process(job: Job<any>, token?: string): Promise<any> {
@@ -84,7 +115,15 @@ export class AnalysisWorker extends WorkerHost {
   }
 
   // 1. STT
-  private async handleStt(job: Job<{ answerId: string }>) {
+  private async handleStt(
+    job: Job<{ answerId: string; sessionId: string }>,
+    token?: string,
+  ) {
+    if (!(await this.isSessionReady(job.data.sessionId))) {
+      this.logger.debug(`handleStt: ${job.data.sessionId} not ready`);
+      return this.delayAndExit(job, 30_000, token);
+    }
+
     const { answerId } = job.data;
     await job.updateProgress(10);
 
@@ -97,7 +136,7 @@ export class AnalysisWorker extends WorkerHost {
       this.logger.error(
         `Answer not found or missing audio_path for ID: ${answerId}`,
       );
-      return;
+      throw new Error("Answer not found");
     }
 
     // 1. url 발급
@@ -124,7 +163,15 @@ export class AnalysisWorker extends WorkerHost {
   }
 
   // 2. refine
-  private async handleRefine(job: Job<{ answerId: string }>) {
+  private async handleRefine(
+    job: Job<{ answerId: string; sessionId: string }>,
+    token?: string,
+  ) {
+    if (!(await this.isSessionReady(job.data.sessionId))) {
+      this.logger.debug(`handleRefine: ${job.data.sessionId} not ready`);
+      return this.delayAndExit(job, 30_000, token);
+    }
+
     const { answerId } = job.data;
     await job.updateProgress(10);
 
@@ -135,7 +182,7 @@ export class AnalysisWorker extends WorkerHost {
       this.logger.error(
         `STT 결과가 없거나 segments가 없습니다. answerId: ${answerId}`,
       );
-      return;
+      throw new Error("STT 결과가 없거나 segments가 없습니다.");
     }
 
     const questionText = analysis.answer.session_question.question.text;
@@ -159,9 +206,14 @@ export class AnalysisWorker extends WorkerHost {
 
   // 3. Audio-Wait
   private async handleAudioWait(
-    job: Job<{ answerId: string; triggered?: boolean }>,
+    job: Job<{ answerId: string; triggered?: boolean; sessionId: string }>,
     token?: string,
   ) {
+    if (!(await this.isSessionReady(job.data.sessionId))) {
+      this.logger.debug(`handleAudioWait: ${job.data.sessionId} not ready`);
+      return this.delayAndExit(job, 30_000, token);
+    }
+
     const { answerId } = job.data;
     const analysis = await this.getAnalysis(answerId);
 
@@ -218,7 +270,7 @@ export class AnalysisWorker extends WorkerHost {
     const refineReady = !!analysis?.refined_json;
 
     // rubric 준비 여부
-    const rubricReady = await this.isRubricReady(sessionId);
+    const rubricReady = await this.isSessionReady(sessionId);
 
     // check
     if (!refineReady || !rubricReady) {
@@ -226,7 +278,14 @@ export class AnalysisWorker extends WorkerHost {
     }
 
     // 실제 feedback 처리
-    const feedback = { feedback: [] };
+
+    const dto = await this.getFeedbackDto(sessionId, answerId);
+
+    if (!dto) {
+      this.logger.error(`FeedbackDto 생성 실패: ${sessionId}, ${answerId}`);
+    }
+
+    const feedback = await this.analysisService.feedback(dto);
 
     await this.repo
       .createQueryBuilder()

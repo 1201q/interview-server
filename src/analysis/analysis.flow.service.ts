@@ -45,17 +45,17 @@ export class AnalysisFlowService {
         {
           name: "stt",
           queueName: "analysis",
-          data: { answerId: params.answerId },
+          data: { answerId: params.answerId, sessionId: params.sessionId },
         },
         {
           name: "refine",
           queueName: "analysis",
-          data: { answerId: params.answerId },
+          data: { answerId: params.answerId, sessionId: params.sessionId },
         },
         {
           name: "audio-wait",
           queueName: "analysis",
-          data: { answerId: params.answerId },
+          data: { answerId: params.answerId, sessionId: params.sessionId },
         },
         {
           name: "feedback-gate",
@@ -69,8 +69,6 @@ export class AnalysisFlowService {
     const childIds = Object.fromEntries(
       childrenArray.map((node) => [node.job.name, node.job.id]),
     );
-
-    console.log(childIds);
 
     await this.repo
       .createQueryBuilder()

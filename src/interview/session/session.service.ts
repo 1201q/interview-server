@@ -15,6 +15,7 @@ import {
 } from "./session.dto";
 import { SessionQuestionService } from "../question/question.service";
 import { ConfigService } from "@nestjs/config";
+import { SessionPrepFlowService } from "@/analysis/session-prep.flow.service";
 
 @Injectable()
 export class InterviewSessionService {
@@ -24,6 +25,8 @@ export class InterviewSessionService {
     private readonly config: ConfigService,
     private readonly dataSource: DataSource,
     private readonly questionService: SessionQuestionService,
+
+    private readonly sessionPrepFlow: SessionPrepFlowService,
 
     @InjectRepository(InterviewSession)
     private readonly sessionRepo: Repository<InterviewSession>,
@@ -81,11 +84,11 @@ export class InterviewSessionService {
     });
 
     // 5. 커밋 후 큐 발행
-    // try {
-    //   await this.rubricProducer.enqueueGenerateRubric(createdSessionId!);
-    // } catch (error) {
-    //   this.logger.warn(`enqueue GenerateRubric failed: ${error}`);
-    // }
+    try {
+      await this.sessionPrepFlow.start(createdSessionId!);
+    } catch (error) {
+      this.logger.warn(`enqueue GenerateRubric failed: ${error}`);
+    }
 
     return result;
   }

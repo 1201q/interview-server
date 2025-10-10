@@ -18,7 +18,11 @@ import {
   ApiResponse,
   ApiParam,
 } from "@nestjs/swagger";
-import { SubmitAnswerDto, SubmitAnswerResponseDto } from "./answer.dto";
+import {
+  SubmitAnswerDto,
+  SubmitAnswerResponseDto,
+  TestSubmitAnswerResponseDto,
+} from "./answer.dto";
 
 import { InterviewAnswerService } from "./answer.service";
 
@@ -67,6 +71,47 @@ export class InterviewAnswerController {
     const nextQuestion = await this.answerService.submitAnswer({
       sessionId,
       sQuestionId,
+      audio: file,
+      text: body.answerText,
+      decideFollowup: false,
+    });
+
+    return nextQuestion;
+  }
+
+  @Post(":answerId/start")
+  @ApiOperation({ summary: "질문 응답 시작" })
+  @ApiParam({ name: "answerId", description: "answer ID" })
+  @ApiResponse({
+    status: HttpStatus.NO_CONTENT,
+    description: "응답이 시작되었습니다.",
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async testStart(@Param("answerId") answerId: string) {
+    await this.answerService.testStartAnswer(answerId);
+  }
+
+  @Post(":answerId/submit")
+  @ApiOperation({
+    summary: "응답 제출 및 다음 질문 준비 (꼬리질문 판별 x)",
+  })
+  @ApiParam({ name: "answerId", description: "answer ID" })
+  @ApiConsumes("multipart/form-data")
+  @UseInterceptors(FileInterceptor("audio"))
+  @ApiBody({
+    type: SubmitAnswerDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    type: TestSubmitAnswerResponseDto,
+  })
+  async testSubmit(
+    @Param("answerId") answerId: string,
+    @UploadedFile() file: Express.Multer.File | null,
+    @Body() body: SubmitAnswerDto,
+  ): Promise<TestSubmitAnswerResponseDto> {
+    const nextQuestion = await this.answerService.testSubmitAnswer({
+      answerId,
       audio: file,
       text: body.answerText,
       decideFollowup: false,

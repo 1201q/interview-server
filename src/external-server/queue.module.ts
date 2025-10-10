@@ -19,26 +19,18 @@ import { FlowProducer } from "bullmq";
         },
       }),
     }),
-    BullModule.registerQueue(
-      { name: "rubric" },
-      { name: "stt" },
-      { name: "refine" },
-      { name: "feedback" },
-      { name: "audio" },
-      { name: "analysis" },
+    BullModule.registerQueue({ name: "analysis" }, { name: "session" }),
+    BullModule.registerFlowProducer(
+      { name: "analysisFlow" },
+      { name: "sessionFlow" },
     ),
-    BullModule.registerFlowProducer({ name: "analysisFlow" }),
     BullBoardModule.forRoot({
       route: "/admin/queues",
       adapter: ExpressAdapter,
     }),
     BullBoardModule.forFeature(
       { name: "analysis", adapter: BullMQAdapter },
-      { name: "rubric", adapter: BullMQAdapter },
-      { name: "stt", adapter: BullMQAdapter },
-      { name: "refine", adapter: BullMQAdapter },
-      { name: "feedback", adapter: BullMQAdapter },
-      { name: "audio", adapter: BullMQAdapter },
+      { name: "session", adapter: BullMQAdapter },
     ),
   ],
   providers: [
