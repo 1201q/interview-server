@@ -1,3 +1,10 @@
+// =========================================== status
+type GenerateStatus = "pending" | "working" | "completed" | "failed";
+type SessionStatus = "not_started" | "in_progress" | "completed" | "expired";
+type QAStatus = "pending" | "processing" | "completed" | "failed";
+type AnswerStatus = "waiting" | "ready" | "answering" | "submitted";
+
+// =========================================== result
 export interface AnalysesResultDto {
   session_id: string;
   job_role: string | null;
@@ -65,4 +72,22 @@ export interface VoicePublic {
     pause_distribution: { head: number; body: number; tail: number };
     phrase_len_sd: number;
   };
+}
+
+// ============================================ status
+export interface AnalysesStatusesDto {
+  session_id: string;
+  session_status: string;
+  job_role: string | null;
+  statuses: AnalysesStatusesItem[];
+}
+
+export interface AnalysesStatusesItem {
+  answer_id: string;
+  order: number;
+  question_text: string;
+  answer_status: AnswerStatus;
+  rubric_status: QAStatus;
+  analysis_status: QAStatus;
+  analysis_progress: number;
 }

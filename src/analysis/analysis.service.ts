@@ -25,13 +25,15 @@ import {
 } from "@/common/prompts/feedback.prompt";
 import { FeedbackSchema, isFeedback } from "@/common/schemas/feedback.schema";
 import { InjectRepository } from "@nestjs/typeorm";
-import { InterviewSession } from "@/common/entities/entities";
+import { Answer, InterviewSession } from "@/common/entities/entities";
 import { Repository } from "typeorm";
 import { TranscriptionSegment } from "openai/resources/audio/transcriptions";
 import { OciDBService } from "@/external-server/oci-db.service";
 import { isVoiceJson } from "@/common/schemas/voice.schema";
 import {
   AnalysesResultDto,
+  AnalysesStatusesDto,
+  AnalysesStatusesItem,
   FeedbackItemDto,
   RubricItemDto,
   SegmentDto,
@@ -47,6 +49,9 @@ export class AnalysisService {
 
     @InjectRepository(InterviewSession)
     private readonly sessionRepo: Repository<InterviewSession>,
+
+    @InjectRepository(Answer)
+    private readonly answerRepo: Repository<Answer>,
   ) {}
 
   async transcript(file: Express.Multer.File) {
@@ -135,7 +140,7 @@ export class AnalysisService {
     return run;
   }
 
-  async getResult(sessionId: string): Promise<AnalysesResultDto> {
+  async getAnalysesResult(sessionId: string): Promise<AnalysesResultDto> {
     const result = await this.sessionRepo.findOne({
       where: { id: sessionId },
       relations: [
@@ -151,60 +156,135 @@ export class AnalysisService {
       throw new NotFoundException("Session not found");
     }
 
-    const analyses = result.session_questions.map((sq) => {
-      const answer = sq.answers?.[0] ?? null;
-      const analysis = answer?.analysis ?? null;
-
-      // STT/Refine 안전 접근
-      const sttSegments =
-        analysis?.stt_json && "segments" in analysis.stt_json
-          ? (analysis.stt_json.segments as TranscriptionSegment[])
-          : [];
-
-      const refined = Array.isArray(analysis?.refined_json)
-        ? (analysis!.refined_json as any[])
-        : [];
-
-      const segments: SegmentDto[] = sttSegments.map((s, i) => ({
-        id: s.id,
-        start: s.start,
-        end: s.end,
-        text: s.text,
-        refined_text: refined[i],
-      }));
-
-      // 타입 가드
-      const feedback = this.toFeedbackDto(analysis?.feedback_json);
-
-      const voicePublic = this.toPublicVoice(
-        isVoiceJson(analysis?.voice_json) ? analysis!.voice_json : null,
-      );
-
-      const rubricDto = this.toRubricDto(sq.rubric_json);
-
-      return {
-        id: sq.id,
-        order: sq.order,
-        question_text: sq.question.text,
-        rubric: {
-          intent: rubricDto.intent,
-          required: rubricDto.required,
-          optional: rubricDto.optional,
-          context: rubricDto.context,
-        },
-        answer: {
-          audio_path: answer?.audio_path ?? null,
-          segments,
-        },
-        feedback,
-        voice: voicePublic,
-      };
-    });
+    const analyses = result.session_questions.map((sq) =>
+      this.formatAnalysisItem(sq),
+    );
 
     return {
       session_id: result.id,
       job_role: result.role_guess ?? null,
       analyses,
+    };
+  }
+
+  async getAnalysisResult(
+    sessionId: string,
+    answerId: string,
+  ): Promise<AnalysesResultDto> {
+    const result = await this.sessionRepo.findOne({
+      where: {
+        id: sessionId,
+        session_questions: { answers: { id: answerId } },
+      },
+      relations: [
+        "session_questions",
+        "session_questions.question",
+        "session_questions.answers",
+        "session_questions.answers.analysis",
+      ],
+    });
+
+    if (!result) {
+      throw new NotFoundException("Session or answer not found");
+    }
+
+    const sq = result.session_questions[0];
+
+    return {
+      session_id: result.id,
+      job_role: result.role_guess ?? null,
+      analyses: [this.formatAnalysisItem(sq)],
+    };
+  }
+
+  private formatAnalysisItem(sq: any) {
+    const answer = sq.answers?.[0] ?? null;
+    const analysis = answer?.analysis ?? null;
+
+    const sttSegments =
+      analysis?.stt_json && "segments" in analysis.stt_json
+        ? (analysis.stt_json.segments as TranscriptionSegment[])
+        : [];
+
+    const refined = Array.isArray(analysis?.refined_json)
+      ? (analysis!.refined_json as any[])
+      : [];
+
+    const segments: SegmentDto[] = sttSegments.map((s, i) => ({
+      id: s.id,
+      start: s.start,
+      end: s.end,
+      text: s.text,
+      refined_text: refined[i],
+    }));
+
+    const feedback = this.toFeedbackDto(analysis?.feedback_json);
+    const voicePublic = this.toPublicVoice(
+      isVoiceJson(analysis?.voice_json) ? analysis!.voice_json : null,
+    );
+    const rubricDto = this.toRubricDto(sq.rubric_json);
+
+    return {
+      id: sq.id,
+      order: sq.order,
+      question_text: sq.question.text,
+      rubric: {
+        intent: rubricDto.intent,
+        required: rubricDto.required,
+        optional: rubricDto.optional,
+        context: rubricDto.context,
+      },
+      answer: {
+        audio_path: answer?.audio_path ?? null,
+        segments,
+      },
+      feedback,
+      voice: voicePublic,
+    };
+  }
+
+  async getObjectName(answerId: string) {
+    const target = await this.answerRepo.findOne({
+      where: { id: answerId },
+      select: { audio_path: true },
+    });
+
+    return target.audio_path;
+  }
+
+  async getStatuses(sessionId: string): Promise<AnalysesStatusesDto> {
+    const result = await this.sessionRepo.findOne({
+      where: { id: sessionId },
+      relations: [
+        "session_questions",
+        "session_questions.question",
+        "session_questions.answers",
+        "session_questions.answers.analysis",
+      ],
+      order: { session_questions: { order: "ASC" } },
+    });
+
+    if (!result) {
+      throw new NotFoundException("Session not found");
+    }
+
+    const statuses: AnalysesStatusesItem[] = result.session_questions.map(
+      (sq) => ({
+        answer_id: sq.answers[0].id,
+        order: sq.order,
+        question_text: sq.question.text,
+        answer_status: sq.answers[0].status,
+        rubric_status: sq.rubric_status,
+        analysis_status: sq.answers[0].analysis.status,
+        analysis_progress: sq.answers[0].analysis.progress,
+      }),
+    );
+
+    return {
+      session_id: result.id,
+      session_status: result.status,
+      job_role: result.role_guess ?? null,
+      statuses: statuses,
     };
   }
 
