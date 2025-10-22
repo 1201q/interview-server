@@ -44,6 +44,7 @@ export class AuthController {
     secure: this.isProd,
     sameSite: "lax" as SameSite,
     path: "/",
+    domain: this.isProd ? "aiterview.tech" : undefined,
   };
 
   private get accessCookieOpts() {
