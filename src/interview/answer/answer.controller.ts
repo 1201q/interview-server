@@ -88,6 +88,7 @@ export class InterviewAnswerController {
   })
   @HttpCode(HttpStatus.NO_CONTENT)
   async testStart(@Param("answerId") answerId: string) {
+    console.log(`AnswerController: testStart ${answerId}`);
     await this.answerService.testStartAnswer(answerId);
   }
 

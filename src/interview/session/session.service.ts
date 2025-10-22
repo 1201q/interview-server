@@ -115,6 +115,7 @@ export class InterviewSessionService {
       questions: session.session_questions.map((sq) => ({
         id: sq.id,
         question_id: sq.question.id ?? null,
+        answer_id: sq.answers[0].id ?? null,
         order: sq.order,
         type: sq.type,
         text: sq.type === "main" ? sq.question.text : sq.followup_text,

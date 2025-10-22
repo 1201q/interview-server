@@ -1,13 +1,30 @@
-import { Controller, Get, NotFoundException, Param, Res } from "@nestjs/common";
-import { ApiOperation, ApiTags } from "@nestjs/swagger";
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  NotFoundException,
+  Param,
+  Post,
+  Req,
+  Res,
+} from "@nestjs/common";
+import {
+  ApiCookieAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from "@nestjs/swagger";
 
 import { AnalysisService } from "./analysis.service";
 import {
   AnalysesResultDto,
   AnalysesStatusesDto,
 } from "@/common/types/analysis.types";
-import { Response } from "express";
+import { Response, Request } from "express";
 import { OciDBService } from "@/external-server/oci-db.service";
+import { AuthService } from "@/auth/auth.service";
 
 @ApiTags("분석")
 @Controller("analysis")
@@ -15,6 +32,7 @@ export class AnalysisController {
   constructor(
     private readonly analysisService: AnalysisService,
     private readonly oci: OciDBService,
+    private readonly authService: AuthService,
   ) {}
 
   @Get(":sessionId/result")
@@ -70,5 +88,22 @@ export class AnalysisController {
     const url = await this.oci.generatePresignedUrl(objectName);
 
     res.redirect(302, url);
+  }
+
+  @Get("result/bulk")
+  @ApiOperation({ summary: "면접 분석 가져오기" })
+  // @ApiResponse({ type: SessionResponseDto })
+  @ApiCookieAuth("accessToken")
+  async create(
+    // @Body() body: CreateInterviewSessionBodyDto,
+    @Req() req: Request,
+  ) {
+    const token = req.cookies.accessToken as string;
+    const { id } = await this.authService.decodeAccessToken(token);
+
+    // return this.sessionService.createSession({
+    //   ...body,
+    //   user_id: id,
+    // });
   }
 }
