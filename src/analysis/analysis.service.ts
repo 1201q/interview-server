@@ -276,7 +276,13 @@ export class AnalysisService {
         answer_status: sq.answers[0].status,
         rubric_status: sq.rubric_status,
         analysis_status: sq.answers[0].analysis.status,
-        analysis_progress: sq.answers[0].analysis.progress,
+        analysis_progress: {
+          overall: sq.answers[0].analysis.progress,
+          stt: sq.answers[0].analysis.stt_json ? true : false,
+          refine: sq.answers[0].analysis.refined_json ? true : false,
+          audio: sq.answers[0].analysis.voice_json ? true : false,
+          feedback: sq.answers[0].analysis.feedback_json ? true : false,
+        },
       }),
     );
 

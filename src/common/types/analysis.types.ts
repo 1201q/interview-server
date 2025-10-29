@@ -89,5 +89,13 @@ export interface AnalysesStatusesItem {
   answer_status: AnswerStatus;
   rubric_status: QAStatus;
   analysis_status: QAStatus;
-  analysis_progress: number;
+  analysis_progress: AnalysisProgress;
+}
+
+export interface AnalysisProgress {
+  overall: number;
+  stt: boolean;
+  refine: boolean;
+  audio: boolean;
+  feedback: boolean;
 }

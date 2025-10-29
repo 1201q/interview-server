@@ -27,10 +27,10 @@ export class AnalysisFlowService {
     progress?: Progress;
   }) {
     const progress: Progress = params.progress ?? {
-      stt: 20,
-      refine: 20,
-      audio: 20,
-      feedback: 40,
+      stt: 25,
+      refine: 25,
+      audio: 25,
+      feedback: 25,
     };
 
     const tree = await this.flow.add({

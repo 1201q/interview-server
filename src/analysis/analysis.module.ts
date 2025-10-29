@@ -21,6 +21,8 @@ import { AnalysisFlowService } from "./analysis.flow.service";
 import { AnalysisWorker } from "./analysis.worker";
 import { SessionPrepFlowService } from "./session-prep.flow.service";
 import { SessionPrepWorker } from "./session-prep.worker";
+import { AnalysisSseController } from "./analysis.sse.controller";
+import { AnalysisEventsService } from "./analysis.events.service";
 
 @Module({
   imports: [
@@ -37,7 +39,7 @@ import { SessionPrepWorker } from "./session-prep.worker";
     QueueModule,
     OpenaiModule,
   ],
-  controllers: [AnalysisController],
+  controllers: [AnalysisController, AnalysisSseController],
   providers: [
     OciDBService,
     AnalysisService,
@@ -45,6 +47,7 @@ import { SessionPrepWorker } from "./session-prep.worker";
     AnalysisWorker,
     SessionPrepFlowService,
     SessionPrepWorker,
+    AnalysisEventsService,
   ],
   exports: [AnalysisService, AnalysisFlowService, SessionPrepFlowService],
 })

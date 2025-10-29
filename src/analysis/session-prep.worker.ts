@@ -9,6 +9,7 @@ import { InterviewSession, SessionQuestion } from "@/common/entities/entities";
 import { AnalysisService } from "./analysis.service";
 
 import { GenerateRubricDto } from "./analysis.dto";
+import { AnalysisEventsService } from "./analysis.events.service";
 
 @Injectable()
 @Processor("session", { concurrency: 4 })
@@ -22,8 +23,16 @@ export class SessionPrepWorker extends WorkerHost {
     private readonly repo: Repository<InterviewSession>,
 
     private readonly analysisService: AnalysisService,
+    private readonly events: AnalysisEventsService,
   ) {
     super();
+  }
+
+  private notifyStatusUpdate(sessionId: string) {
+    this.events.emit(sessionId, {
+      type: "status_update",
+      session_id: sessionId,
+    });
   }
 
   private async getRubricDto(sessionId: string): Promise<GenerateRubricDto> {
@@ -82,8 +91,10 @@ export class SessionPrepWorker extends WorkerHost {
       .execute();
 
     this.logger.debug(`guess 완료: ${sessionId} ${guess}`);
+
+    this.notifyStatusUpdate(sessionId);
     await job.updateProgress(100);
-    return { ok: true };
+    return { ok: true, sessionId };
   }
 
   private async handleRubric(job: Job<{ sessionId: string }>) {
@@ -147,8 +158,9 @@ export class SessionPrepWorker extends WorkerHost {
 
     this.logger.debug(`Rubric saved to DB: ${sessionId}`);
 
+    this.notifyStatusUpdate(sessionId);
     await job.updateProgress(100);
-    return { ok: true };
+    return { ok: true, sessionId };
   }
 
   private async handleParent(job: Job<{ sessionId: string }>) {
