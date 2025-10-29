@@ -421,7 +421,6 @@ export class AnalysisWorker extends WorkerHost {
   ) {
     const { answerId, sessionId } = job.data;
 
-    this.emitProgress(sessionId, answerId, "overall", 100);
     await job.updateProgress(100);
 
     await this.repo

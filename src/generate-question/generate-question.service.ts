@@ -1,5 +1,4 @@
 import {
-  HttpStatus,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -42,6 +41,7 @@ type WriteEventOpts = {
   id?: string | number;
   event?: string;
   data?: any;
+
   retryMs?: number;
 };
 
@@ -219,7 +219,7 @@ export class GenerateQuestionService {
     requestEntity.status = "working";
     await this.requestRepo.save(requestEntity);
 
-    const limits = { basic: 2, experience: 3, job_related: 3, expertise: 3 };
+    const limits = { basic: 3, experience: 6, job_related: 5, expertise: 6 };
     const limitCount = Object.values(limits).reduce((sum, v) => sum + v, 0);
 
     let createdTotal = 0;
@@ -241,13 +241,15 @@ export class GenerateQuestionService {
 
         createdTotal += 1;
 
-        console.log(item);
-
-        this.writeEvent(res, { id: nextId(), event: "question", data: item });
+        this.writeEvent(res, {
+          id: nextId(),
+          event: "question",
+          data: { type: "question", ...item },
+        });
         this.writeEvent(res, {
           id: nextId(),
           event: "progress",
-          data: { limitCount, createdTotal },
+          data: { type: "progress", ...{ limitCount, createdTotal } },
         });
       } catch (error) {
         this.writeEvent(res, {
@@ -262,36 +264,38 @@ export class GenerateQuestionService {
       this.writeEvent(res, {
         id: nextId(),
         event: "progress",
-        data: { limitCount, createdTotal },
+        data: { type: "progress", ...{ limitCount, createdTotal } },
       });
 
       // db 반영
       try {
         const result = await stream.finalResponse();
 
-        console.log(result);
+        const questions = result.output_parsed.questions.map((q) =>
+          this.questionRepo.create({
+            request: requestEntity,
+            text: q.text,
+            based_on: q.based_on,
+            section: q.section,
+          }),
+        );
 
-        // const questions = result.output_parsed.questions.map((q) =>
-        //   this.questionRepo.create({
-        //     request: requestEntity,
-        //     text: q.text,
-        //     based_on: q.based_on,
-        //     section: q.section,
-        //   }),
-        // );
+        await this.questionRepo.save(questions);
 
-        // await this.questionRepo.save(questions);
+        requestEntity.status = "completed";
+        await this.requestRepo.save(requestEntity);
 
-        // requestEntity.status = "completed";
-        // await this.requestRepo.save(requestEntity);
-
-        this.writeEvent(res, { id: nextId(), event: "done", data: "[DONE]" });
+        this.writeEvent(res, {
+          id: nextId(),
+          event: "completed",
+          data: { type: "completed", msg: "[DONE]" },
+        });
       } catch (error) {
         if (!res.writableEnded) {
           this.writeEvent(res, {
             id: nextId(),
             event: "failed",
-            data: { reason: "db_error", msg: String(error) },
+            data: { reason: "db_error", msg: String(error), type: "failed" },
           });
         }
 
@@ -382,22 +386,34 @@ export class GenerateQuestionService {
       for (let i = 0; i < limitCount; i++) {
         const item = MOCK_QUESTIONS[i];
 
-        this.writeEvent(res, { id: nextId(), event: "question", data: item });
+        this.writeEvent(res, {
+          id: nextId(),
+          event: "question",
+          data: { type: "question", ...item },
+        });
         this.writeEvent(res, {
           id: nextId(),
           event: "progress",
-          data: { limitCount, createdTotal: i + 1 },
+
+          data: {
+            type: "progress",
+            ...{ limitCount, createdTotal: i + 1 },
+          },
         });
 
         await new Promise((r) => setTimeout(r, 1000));
       }
 
-      this.writeEvent(res, { id: nextId(), event: "done", data: "[DONE]" });
+      this.writeEvent(res, {
+        id: nextId(),
+        event: "completed",
+        data: { type: "completed", msg: "[DONE]" },
+      });
     } catch (e) {
       this.writeEvent(res, {
         id: nextId(),
         event: "failed",
-        data: { reason: "mock_error", msg: String(e) },
+        data: { reason: "mock_error", msg: String(e), type: "failed" },
       });
     } finally {
       safeEnd();
