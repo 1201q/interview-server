@@ -31,6 +31,7 @@ import { TranscriptionSegment } from "openai/resources/audio/transcriptions";
 import { OciDBService } from "@/external-server/oci-db.service";
 import { isVoiceJson } from "@/common/schemas/voice.schema";
 import {
+  AnalysesListDto,
   AnalysesResultDto,
   AnalysesStatusesDto,
   AnalysesStatusesItem,
@@ -39,6 +40,7 @@ import {
   SegmentDto,
   VoicePublic,
 } from "@/common/types/analysis.types";
+import { session } from "passport";
 
 @Injectable()
 export class AnalysisService {
@@ -291,6 +293,50 @@ export class AnalysisService {
       session_status: result.status,
       job_role: result.role_guess ?? null,
       statuses: statuses,
+    };
+  }
+
+  // 리스트
+
+  async getAnalysesList(
+    userId: string,
+  ): Promise<{ results: AnalysesListDto[] }> {
+    const result = await this.sessionRepo.find({
+      where: { user_id: userId, status: "completed" },
+      relations: [
+        "session_questions.question",
+        "session_questions.answers",
+        "session_questions.answers.analysis",
+      ],
+      order: { session_questions: { order: "ASC" } },
+    });
+
+    if (!result) {
+      throw new NotFoundException("Session not found");
+    }
+
+    return {
+      results: result.map((session) => ({
+        session_id: session.id,
+        job_role: session.role_guess ?? null,
+        interview_started_at:
+          session.session_questions[0].answers[0].started_at,
+        interview_completed_at:
+          session.session_questions[session.session_questions.length - 1]
+            .answers[
+            session.session_questions[session.session_questions.length - 1]
+              .answers.length - 1
+          ].ended_at,
+        rubric_status: session.rubric_gen_status,
+        analysis_completed: session.session_questions.every(
+          (sq) => sq.answers[0].analysis.progress === 100,
+        ),
+        questions: {
+          text: session.session_questions
+            .sort((a, b) => a.order - b.order)
+            .map((sq) => sq.question.text),
+        },
+      })),
     };
   }
 

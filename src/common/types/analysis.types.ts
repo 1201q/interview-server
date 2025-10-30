@@ -99,3 +99,17 @@ export interface AnalysisProgress {
   audio: boolean;
   feedback: boolean;
 }
+
+export interface AnalysesListDto {
+  session_id: string;
+  job_role: string | null;
+  interview_started_at: Date;
+  interview_completed_at: Date;
+
+  rubric_status: QAStatus;
+  analysis_completed: boolean;
+
+  questions: {
+    text: string[];
+  };
+}

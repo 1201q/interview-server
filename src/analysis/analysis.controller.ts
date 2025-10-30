@@ -106,4 +106,14 @@ export class AnalysisController {
     //   user_id: id,
     // });
   }
+
+  @Get("results/list")
+  @ApiOperation({ summary: "내가 진행한 과거 면접 분석 가져오기" })
+  @ApiCookieAuth("accessToken")
+  async list(@Req() req: Request) {
+    const token = req.cookies.accessToken as string;
+    const { id } = await this.authService.decodeAccessToken(token);
+
+    return await this.analysisService.getAnalysesList(id);
+  }
 }
