@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsString } from "class-validator";
+import { IsObject, IsOptional, IsString } from "class-validator";
 
 export class UploadAudioDto {
   @ApiProperty({
@@ -15,6 +15,11 @@ export class SubmitAnswerDto extends UploadAudioDto {
   @ApiProperty({ description: "사용자 입력 답변 텍스트" })
   @IsString()
   answerText: string;
+
+  @ApiProperty({ description: "faceData" })
+  @IsOptional()
+  @IsString()
+  faceData?: string;
 }
 
 export class NextQuestionDto {

@@ -25,6 +25,7 @@ import {
 } from "./answer.dto";
 
 import { InterviewAnswerService } from "./answer.service";
+import { FaceFrameState } from "@/common/types/analysis.types";
 
 @ApiTags("인터뷰 답변")
 @Controller("interview-answer")
@@ -111,11 +112,16 @@ export class InterviewAnswerController {
     @UploadedFile() file: Express.Multer.File | null,
     @Body() body: SubmitAnswerDto,
   ): Promise<TestSubmitAnswerResponseDto> {
+    const faceData: FaceFrameState[] | null = body.faceData
+      ? (JSON.parse(body.faceData) as FaceFrameState[])
+      : null;
+
     const nextQuestion = await this.answerService.testSubmitAnswer({
       answerId,
       audio: file,
       text: body.answerText,
       decideFollowup: false,
+      faceData,
     });
 
     return nextQuestion;

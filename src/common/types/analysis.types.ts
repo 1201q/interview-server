@@ -22,6 +22,7 @@ export interface AnalysisItem {
   };
   feedback: FeedbackItemDto | null;
   voice: VoicePublic | null; // 축약된 보이스 지표
+  face: FaceFrameState[] | null; // 얼굴 분석 데이터
 }
 
 export interface RubricItemDto {
@@ -113,3 +114,28 @@ export interface AnalysesListDto {
     text: string[];
   };
 }
+
+export type GazeDirection = "left" | "right" | "up" | "down" | "center";
+export type GazeState = {
+  timestamp: number;
+  direction: GazeDirection;
+  facingVotes: Record<GazeDirection, number>;
+  irisVotes: Record<GazeDirection, number>;
+  blink: boolean;
+  faceDetected: boolean;
+};
+export type EmotionVotes = {
+  positive: number;
+  negative: number;
+};
+export type EmotionState = {
+  timestamp: number;
+  votes: EmotionVotes;
+};
+
+export type FaceFrameState = {
+  timestamp: number;
+  gaze: GazeState;
+  emotion: EmotionState;
+  faceDetected: boolean;
+};

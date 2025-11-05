@@ -221,6 +221,9 @@ export class AnswerAnalysis {
   @Column("json", { nullable: true })
   voice_json: object | null;
 
+  @Column("json", { nullable: true })
+  face_json: object | null;
+
   @Column("clob", { nullable: true })
   last_error?: string | null;
 

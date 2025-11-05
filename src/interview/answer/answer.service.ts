@@ -22,6 +22,7 @@ import {
 import { FlaskServerService } from "src/external-server/flask-server.service";
 import { OciDBService } from "src/external-server/oci-db.service";
 import { AnalysisFlowService } from "@/analysis/analysis.flow.service";
+import { FaceFrameState } from "@/common/types/analysis.types";
 
 type SubmitAnswerInput = {
   sessionId: string;
@@ -36,6 +37,7 @@ type TestSubmitAnswerInput = {
   text: string;
   audio?: Express.Multer.File | null;
   decideFollowup?: boolean;
+  faceData?: FaceFrameState[] | null;
 };
 
 @Injectable()
@@ -261,7 +263,7 @@ export class InterviewAnswerService {
   async testSubmitAnswer(
     input: TestSubmitAnswerInput,
   ): Promise<TestSubmitAnswerResponseDto> {
-    const { answerId, text, audio, decideFollowup = false } = input;
+    const { answerId, text, audio, decideFollowup = false, faceData } = input;
 
     let objectName: string | undefined;
 
@@ -327,7 +329,11 @@ export class InterviewAnswerService {
           });
 
           if (!analysis) {
-            analysis = analysisRepo.create({ answer, status: "pending" });
+            analysis = analysisRepo.create({
+              answer,
+              status: "pending",
+              face_json: faceData,
+            });
             await analysisRepo.save(analysis);
           } else {
             analysis.status = "pending";
@@ -336,6 +342,7 @@ export class InterviewAnswerService {
             analysis.stt_json = null;
             analysis.refined_json = null;
             analysis.voice_json = null;
+            analysis.face_json = faceData;
             await analysisRepo.save(analysis);
           }
 

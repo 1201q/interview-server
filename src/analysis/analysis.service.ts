@@ -35,6 +35,7 @@ import {
   AnalysesResultDto,
   AnalysesStatusesDto,
   AnalysesStatusesItem,
+  FaceFrameState,
   FeedbackItemDto,
   RubricItemDto,
   SegmentDto,
@@ -203,6 +204,10 @@ export class AnalysisService {
     const answer = sq.answers?.[0] ?? null;
     const analysis = answer?.analysis ?? null;
 
+    const face = analysis?.face_json
+      ? (analysis.face_json as FaceFrameState[])
+      : null;
+
     const sttSegments =
       analysis?.stt_json && "segments" in analysis.stt_json
         ? (analysis.stt_json.segments as TranscriptionSegment[])
@@ -242,6 +247,7 @@ export class AnalysisService {
       },
       feedback,
       voice: voicePublic,
+      face: face,
     };
   }
 
