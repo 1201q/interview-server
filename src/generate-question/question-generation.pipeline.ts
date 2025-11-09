@@ -10,6 +10,8 @@ import { parser } from "stream-json";
 import { pick } from "stream-json/filters/Pick";
 import { streamArray } from "stream-json/streamers/StreamArray";
 
+import { APIUserAbortError } from "openai/error";
+
 @Injectable()
 export class QuestionGenerationPipeline {
   constructor(private readonly ai: OpenAIService) {}
@@ -63,7 +65,16 @@ export class QuestionGenerationPipeline {
   }
 
   async getFinalQuestions(stream: any): Promise<QuestionItem[]> {
-    const result = await stream.finalResponse();
-    return result.output_parsed.questions;
+    try {
+      const result = await stream.finalResponse();
+      return result.output_parsed.questions;
+    } catch (e: any) {
+      // 사용자가 abort한 경우: 그냥 빈 배열 반환
+      // 지우면 안됨
+      if (e?.name === "APIUserAbortError") {
+        return [];
+      }
+      throw e;
+    }
   }
 }

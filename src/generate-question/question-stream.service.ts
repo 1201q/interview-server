@@ -20,6 +20,8 @@ export class QuestionStreamService {
     const request = await this.requests.markWorking(requestId);
 
     let closed = false;
+    let clientClosed = false;
+
     const safeEnd = (hb?: NodeJS.Timeout) => {
       if (!closed) {
         closed = true;
@@ -43,6 +45,8 @@ export class QuestionStreamService {
     const nextId = () => ++eid;
 
     pipeline.on("data", ({ value }) => {
+      if (clientClosed) return; // client가 닫힌 경우 무시
+
       try {
         const item = QuestionItem.parse(value);
         createdTotal += 1;
@@ -70,6 +74,11 @@ export class QuestionStreamService {
     });
 
     pipeline.on("end", async () => {
+      if (clientClosed) {
+        safeEnd(heartbeat);
+        return;
+      }
+
       try {
         const questions = await this.pipeline.getFinalQuestions(stream);
         await this.requests.completeWithQuestions(request, questions);
@@ -94,18 +103,25 @@ export class QuestionStreamService {
 
     pipeline.on("error", async (err) => {
       this.logger.error(err);
-      await this.requests.fail(request);
-      this.events.write(res, {
-        id: nextId(),
-        event: "failed",
-        data: { reason: "parse_error", msg: String(err) },
-      });
+
+      // 클라가 닫힌 경우에는 더 이상 처리하지 않음
+      if (!clientClosed) {
+        await this.requests.fail(request);
+        this.events.write(res, {
+          id: nextId(),
+          event: "failed",
+          data: { reason: "parse_error", msg: String(err) },
+        });
+      }
+
       safeEnd(heartbeat);
     });
 
     res.on("close", () => {
+      clientClosed = true;
       try {
-        (stream as any).abort?.();
+        // (stream as any).abort?.();
+        // abort 호출시 터짐
         pt.destroy();
       } catch {}
       safeEnd(heartbeat);
