@@ -16,7 +16,7 @@ import {
   BuildRubricUserPromptV3,
 } from "@/common/prompts/rubric.prompt";
 
-import { OpenAIService } from "@/llm/openai.service";
+import { OpenAIService } from "@/openai/openai.service";
 import { isRubric, RubricResponseSchema } from "@/common/schemas/rubric.schema";
 import { RoleGuessPrompt } from "@/common/prompts/role-guess.prompt";
 import {

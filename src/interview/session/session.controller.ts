@@ -70,18 +70,6 @@ export class InterviewSessionController {
     });
   }
 
-  @Post("create/test")
-  @ApiOperation({ summary: "새 면접 세션 생성 (테스트)" })
-  @ApiResponse({ status: HttpStatus.CREATED, type: SessionResponseDto })
-  @HttpCode(HttpStatus.CREATED)
-  testCreate(@Body() body: CreateInterviewSessionBodyDto) {
-    const TEST_USER_ID = "88906d3d-8204-487b-93db-b4d436fca1df";
-    return this.sessionService.createSession({
-      ...body,
-      user_id: TEST_USER_ID,
-    });
-  }
-
   @Post(":sessionId/start")
   @ApiOperation({ summary: "면접 세션 시작" })
   @ApiParam({ name: "sessionId", description: "Session ID" })
