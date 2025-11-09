@@ -10,12 +10,13 @@ import {
   AnswerAnalysis,
   InterviewSession,
 } from "@/common/entities/entities";
-import { AnalysisService } from "./analysis.service";
+
 import { OciDBService } from "@/external-server/oci-db.service";
 import axios from "axios";
 import { FlaskServerService } from "@/external-server/flask-server.service";
 import { FeedbackDto } from "./analysis.dto";
 import { AnalysisEventsService } from "./analysis.events.service";
+import { AnalysisAiService } from "./analysis-ai.service";
 type Progress = {
   stt: number;
   refine: number;
@@ -42,7 +43,7 @@ export class AnalysisWorker extends WorkerHost {
     @InjectRepository(InterviewSession)
     private readonly sessionRepo: Repository<InterviewSession>,
 
-    private readonly analysisService: AnalysisService,
+    private readonly ai: AnalysisAiService,
     private readonly ociService: OciDBService,
     private readonly flaskService: FlaskServerService,
     private readonly events: AnalysisEventsService,
@@ -173,8 +174,7 @@ export class AnalysisWorker extends WorkerHost {
     const { answerId, sessionId } = job.data;
 
     try {
-      this.emitProgress(sessionId, answerId, "stt", 10);
-      await job.updateProgress(10);
+      await this.markStageStart(job, sessionId, answerId, "stt");
 
       const answer = await this.ds.getRepository(Answer).findOne({
         where: { id: answerId },
@@ -188,18 +188,14 @@ export class AnalysisWorker extends WorkerHost {
         throw new Error("Answer not found");
       }
 
-      this.emitProgress(sessionId, answerId, "stt", 40);
-
       // 1. url 발급
       const url = await this.ociService.generatePresignedUrl(answer.audio_path);
-      this.logger.debug(`audio url: ${url}`);
 
       // 2. 스트림 다운로드
       const stream = await this.downloadStream(url, answer.audio_path);
 
       // 3. STT API 호출
-      const result = await this.analysisService.transcript(stream as any);
-      this.logger.debug(`STT result: ${result.text}`);
+      const result = await this.ai.transcript(stream as any);
 
       await this.repo
         .createQueryBuilder()
@@ -208,19 +204,10 @@ export class AnalysisWorker extends WorkerHost {
         .where("answer_id = :answerId", { answerId })
         .execute();
 
-      this.emitProgress(sessionId, answerId, "stt", 100);
-      await job.updateProgress(100);
-
-      await this.computeAndUpdateProgress(answerId);
+      await this.markStageComplete(job, sessionId, answerId, "stt");
       return { ok: true, sessionId, answerId };
     } catch (error) {
-      this.events.emit(sessionId, {
-        type: "failed",
-        session_id: sessionId,
-        answer_id: answerId,
-        reason: (error as Error)?.message,
-      });
-
+      this.emitFailed(sessionId, answerId, error);
       throw error;
     }
   }
@@ -233,13 +220,10 @@ export class AnalysisWorker extends WorkerHost {
     const { answerId, sessionId } = job.data;
 
     try {
-      this.emitProgress(sessionId, answerId, "refine", 10);
-      await job.updateProgress(10);
+      await this.markStageStart(job, sessionId, answerId, "refine");
 
       const analysis = await this.getAnalysis(answerId);
       const sttJson = analysis?.stt_json as { segments?: any[] } | undefined;
-
-      this.logger.debug(`STT JSON: ${JSON.stringify(sttJson)}`);
 
       if (
         !sttJson ||
@@ -252,12 +236,9 @@ export class AnalysisWorker extends WorkerHost {
         return this.delayAndExit(job, 5_000, token);
       }
 
-      this.emitProgress(sessionId, answerId, "refine", 40);
-
       const questionText = analysis.answer.session_question.question.text;
-      this.logger.debug(`질문: ${questionText}`);
 
-      const refined = await this.analysisService.refineSttSegments({
+      const refined = await this.ai.refineSttSegments({
         questionText: questionText,
         segments: sttJson.segments,
       });
@@ -269,19 +250,10 @@ export class AnalysisWorker extends WorkerHost {
         .where("answer_id = :answerId", { answerId })
         .execute();
 
-      this.emitProgress(sessionId, answerId, "refine", 100);
-      await job.updateProgress(100);
-
-      await this.computeAndUpdateProgress(answerId);
+      await this.markStageComplete(job, sessionId, answerId, "refine");
       return { ok: true, sessionId, answerId };
     } catch (error) {
-      this.events.emit(sessionId, {
-        type: "failed",
-        session_id: sessionId,
-        answer_id: answerId,
-        reason: (error as Error)?.message,
-      });
-
+      this.emitFailed(sessionId, answerId, error);
       throw error;
     }
   }
@@ -294,15 +266,13 @@ export class AnalysisWorker extends WorkerHost {
     const { sessionId, answerId } = job.data;
 
     try {
+      await this.markStageStart(job, sessionId, answerId, "audio");
+
       const analysis = await this.getAnalysis(answerId);
-      this.emitProgress(sessionId, answerId, "audio", 10);
 
       if (analysis?.voice_json) {
         // 이미 처리된 경우
-        await job.updateProgress(100);
-        this.emitProgress(sessionId, answerId, "audio", 100);
-
-        await this.computeAndUpdateProgress(answerId);
+        await this.markStageComplete(job, sessionId, answerId, "audio");
         return { ok: true, sessionId, answerId };
       }
 
@@ -316,23 +286,13 @@ export class AnalysisWorker extends WorkerHost {
           .where("answer_id = :answerId", { answerId })
           .execute();
 
-        await job.updateProgress(100);
-        this.emitProgress(sessionId, answerId, "audio", 100);
-        this.logger.debug(`flask 분석 완료`);
-
-        await this.computeAndUpdateProgress(answerId);
+        await this.markStageComplete(job, sessionId, answerId, "audio");
         return { ok: true, sessionId, answerId };
       }
 
       return this.delayAndExit(job, 30_000, token);
     } catch (error) {
-      this.events.emit(sessionId, {
-        type: "failed",
-        session_id: sessionId,
-        answer_id: answerId,
-        reason: (error as Error)?.message,
-      });
-
+      this.emitFailed(sessionId, answerId, error);
       throw error;
     }
   }
@@ -350,7 +310,6 @@ export class AnalysisWorker extends WorkerHost {
 
     const audioPath = analysis.answer.audio_path;
 
-    this.logger.debug(`flask 분석 시작`);
     const result = await this.flaskService.getAnalysisFromObjectName(audioPath);
 
     if (result) {
@@ -381,7 +340,7 @@ export class AnalysisWorker extends WorkerHost {
         return this.delayAndExit(job, 15_000, token);
       }
 
-      this.emitProgress(sessionId, answerId, "feedback", 10);
+      await this.markStageStart(job, sessionId, answerId, "feedback");
 
       // 실제 feedback 처리
       const dto = await this.getFeedbackDto(sessionId, answerId);
@@ -390,7 +349,7 @@ export class AnalysisWorker extends WorkerHost {
         throw new Error("FeedbackDto creation failed");
       }
 
-      const feedback = await this.analysisService.feedback(dto);
+      const feedback = await this.ai.feedback(dto);
       await this.repo
         .createQueryBuilder()
         .update(AnswerAnalysis)
@@ -398,19 +357,10 @@ export class AnalysisWorker extends WorkerHost {
         .where("answer_id = :answerId", { answerId })
         .execute();
 
-      this.emitProgress(sessionId, answerId, "feedback", 100);
-      await job.updateProgress(100);
-
-      await this.computeAndUpdateProgress(answerId);
+      await this.markStageComplete(job, sessionId, answerId, "feedback");
       return { ok: true, sessionId, answerId };
     } catch (error) {
-      this.events.emit(sessionId, {
-        type: "failed",
-        session_id: sessionId,
-        answer_id: answerId,
-        reason: (error as Error)?.message,
-      });
-
+      this.emitFailed(sessionId, answerId, error);
       throw error;
     }
   }
@@ -458,5 +408,35 @@ export class AnalysisWorker extends WorkerHost {
     };
 
     return file;
+  }
+
+  private emitFailed(sessionId: string, answerId: string, error: unknown) {
+    this.events.emit(sessionId, {
+      type: "failed",
+      session_id: sessionId,
+      answer_id: answerId,
+      reason: (error as Error)?.message ?? "unknown error",
+    });
+  }
+
+  private async markStageStart(
+    job: Job,
+    sessionId: string,
+    answerId: string,
+    stage: "stt" | "refine" | "audio" | "feedback",
+  ) {
+    this.emitProgress(sessionId, answerId, stage, 40);
+    await job.updateProgress(40);
+  }
+
+  private async markStageComplete(
+    job: Job,
+    sessionId: string,
+    answerId: string,
+    stage: "stt" | "refine" | "audio" | "feedback",
+  ) {
+    this.emitProgress(sessionId, answerId, stage, 100);
+    await job.updateProgress(100);
+    await this.computeAndUpdateProgress(answerId);
   }
 }

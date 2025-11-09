@@ -6,10 +6,10 @@ import { DataSource, Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Injectable, Logger } from "@nestjs/common";
 import { InterviewSession, SessionQuestion } from "@/common/entities/entities";
-import { AnalysisService } from "./analysis.service";
 
 import { GenerateRubricDto } from "./analysis.dto";
 import { AnalysisEventsService } from "./analysis.events.service";
+import { AnalysisAiService } from "./analysis-ai.service";
 
 @Injectable()
 @Processor("session", { concurrency: 4 })
@@ -22,7 +22,7 @@ export class SessionPrepWorker extends WorkerHost {
     @InjectRepository(InterviewSession)
     private readonly repo: Repository<InterviewSession>,
 
-    private readonly analysisService: AnalysisService,
+    private readonly ai: AnalysisAiService,
     private readonly events: AnalysisEventsService,
   ) {
     super();
@@ -80,7 +80,7 @@ export class SessionPrepWorker extends WorkerHost {
 
     this.logger.debug(`Role guess for session ${sessionId}`);
 
-    const guess = await this.analysisService.guessRole(jobText);
+    const guess = await this.ai.guessRole(jobText);
     await this.repo
       .createQueryBuilder()
       .update(InterviewSession)
@@ -103,7 +103,7 @@ export class SessionPrepWorker extends WorkerHost {
     const dto = await this.getRubricDto(sessionId);
 
     this.logger.debug(`Rubric generation for session ${sessionId}`);
-    const data = await this.analysisService.generateRubric(dto);
+    const data = await this.ai.generateRubric(dto);
     const rubric = data.rubric;
 
     this.logger.debug(`Rubric generation completed: ${sessionId}`);

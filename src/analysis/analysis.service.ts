@@ -1,34 +1,13 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
 
-import {
-  FeedbackDto,
-  GenerateRubricDto,
-  RubricDto,
-  STTRefineSegmentsDto,
-} from "./analysis.dto";
+import { isRubric } from "@/common/schemas/rubric.schema";
 
-import { BuildRefineSegmentsPrompt } from "src/common/prompts/stt-refine-prompt";
-import { RefinedSegmentItemZ } from "src/common/schemas/prompt.schema";
-
-import {
-  BuildRubricUserPromptV2,
-  BuildRubricUserPromptV3,
-} from "@/common/prompts/rubric.prompt";
-
-import { OpenAIService } from "@/openai/openai.service";
-import { isRubric, RubricResponseSchema } from "@/common/schemas/rubric.schema";
-import { RoleGuessPrompt } from "@/common/prompts/role-guess.prompt";
-import {
-  BuildFeedbackDeveloperPrompt,
-  BuildFeedbackUserPrompt,
-} from "@/common/prompts/feedback.prompt";
-import { FeedbackSchema, isFeedback } from "@/common/schemas/feedback.schema";
+import { isFeedback } from "@/common/schemas/feedback.schema";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Answer, InterviewSession } from "@/common/entities/entities";
 import { Repository } from "typeorm";
 import { TranscriptionSegment } from "openai/resources/audio/transcriptions";
-import { OciDBService } from "@/external-server/oci-db.service";
+
 import { isVoiceJson } from "@/common/schemas/voice.schema";
 import {
   AnalysesListDto,
@@ -41,15 +20,10 @@ import {
   SegmentDto,
   VoicePublic,
 } from "@/common/types/analysis.types";
-import { session } from "passport";
 
 @Injectable()
 export class AnalysisService {
   constructor(
-    private readonly configService: ConfigService,
-    private readonly ai: OpenAIService,
-    private readonly oci: OciDBService,
-
     @InjectRepository(InterviewSession)
     private readonly sessionRepo: Repository<InterviewSession>,
 
@@ -57,94 +31,8 @@ export class AnalysisService {
     private readonly answerRepo: Repository<Answer>,
   ) {}
 
-  async transcript(file: Express.Multer.File) {
-    const text = await this.ai.transcribe(file);
-    return text;
-  }
-
-  async refineSttSegments(dto: STTRefineSegmentsDto) {
-    const schema = RefinedSegmentItemZ(dto.segments.length);
-    const baseInput = [
-      { role: "user" as const, content: BuildRefineSegmentsPrompt(dto) },
-    ];
-
-    const parsed = await this.ai.chatParsed({
-      opts: { input: baseInput, reasoning: { effort: "low" } },
-      schema: schema,
-    });
-
-    return parsed.refined_segments;
-  }
-
-  async rubric(dto: RubricDto) {
-    const run = await this.ai.chatParsed({
-      opts: {
-        model: "gpt-5-mini",
-        input: [
-          { role: "system", content: "당신은 한 기업의 면접관입니다." },
-          { role: "user", content: BuildRubricUserPromptV2(dto) },
-        ],
-        reasoning: { effort: "medium", summary: "detailed" },
-        tools: this.ai.withFileSearch(dto.vectorId, { max_num_results: 8 }),
-        text: { verbosity: "medium" },
-      },
-      schema: RubricResponseSchema,
-    });
-
-    return run;
-  }
-
-  async generateRubric(dto: GenerateRubricDto) {
-    const run = await this.ai.chatParsed({
-      opts: {
-        model: "gpt-5-mini",
-        input: [
-          { role: "system", content: "당신은 한 기업의 면접관입니다." },
-          { role: "user", content: BuildRubricUserPromptV3(dto) },
-        ],
-        reasoning: { effort: "medium", summary: "detailed" },
-        tools: this.ai.withFileSearch(dto.vectorId, { max_num_results: 8 }),
-        text: { verbosity: "medium" },
-      },
-      schema: RubricResponseSchema,
-    });
-
-    return run;
-  }
-
-  async guessRole(jobText: string): Promise<string> {
-    const run = await this.ai.chat({
-      model: "gpt-5-mini",
-      input: [
-        { role: "system", content: "당신은 한 기업의 면접관입니다." },
-        { role: "user", content: RoleGuessPrompt(jobText) },
-      ],
-      text: { verbosity: "low" },
-    });
-
-    return run.result;
-  }
-
-  async feedback(dto: FeedbackDto) {
-    const run = await this.ai.chatParsed({
-      opts: {
-        model: "gpt-5",
-        input: [
-          { role: "developer", content: BuildFeedbackDeveloperPrompt() },
-          { role: "user", content: BuildFeedbackUserPrompt(dto) },
-        ],
-        reasoning: { effort: "medium", summary: "detailed" },
-        tools: this.ai.withFileSearch(dto.vectorId, { max_num_results: 4 }),
-        text: { verbosity: "low" },
-      },
-      schema: FeedbackSchema,
-    });
-
-    return run;
-  }
-
-  async getAnalysesResult(sessionId: string): Promise<AnalysesResultDto> {
-    const result = await this.sessionRepo.findOne({
+  private async findSessionWithAnalyses(sessionId: string) {
+    const session = await this.sessionRepo.findOne({
       where: { id: sessionId },
       relations: [
         "session_questions",
@@ -155,17 +43,23 @@ export class AnalysisService {
       order: { session_questions: { order: "ASC" } },
     });
 
-    if (!result) {
+    if (!session) {
       throw new NotFoundException("Session not found");
     }
 
-    const analyses = result.session_questions.map((sq) =>
+    return session;
+  }
+
+  async getAnalysesResult(sessionId: string): Promise<AnalysesResultDto> {
+    const session = await this.findSessionWithAnalyses(sessionId);
+
+    const analyses = session.session_questions.map((sq) =>
       this.formatAnalysisItem(sq),
     );
 
     return {
-      session_id: result.id,
-      job_role: result.role_guess ?? null,
+      session_id: session.id,
+      job_role: session.role_guess ?? null,
       analyses,
     };
   }
@@ -261,22 +155,9 @@ export class AnalysisService {
   }
 
   async getStatuses(sessionId: string): Promise<AnalysesStatusesDto> {
-    const result = await this.sessionRepo.findOne({
-      where: { id: sessionId },
-      relations: [
-        "session_questions",
-        "session_questions.question",
-        "session_questions.answers",
-        "session_questions.answers.analysis",
-      ],
-      order: { session_questions: { order: "ASC" } },
-    });
+    const session = await this.findSessionWithAnalyses(sessionId);
 
-    if (!result) {
-      throw new NotFoundException("Session not found");
-    }
-
-    const statuses: AnalysesStatusesItem[] = result.session_questions.map(
+    const statuses: AnalysesStatusesItem[] = session.session_questions.map(
       (sq) => ({
         answer_id: sq.answers[0].id,
         order: sq.order,
@@ -295,9 +176,9 @@ export class AnalysisService {
     );
 
     return {
-      session_id: result.id,
-      session_status: result.status,
-      job_role: result.role_guess ?? null,
+      session_id: session.id,
+      session_status: session.status,
+      job_role: session.role_guess ?? null,
       statuses: statuses,
     };
   }

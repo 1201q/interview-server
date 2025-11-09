@@ -23,6 +23,7 @@ import { SessionPrepFlowService } from "./session-prep.flow.service";
 import { SessionPrepWorker } from "./session-prep.worker";
 import { AnalysisSseController } from "./analysis.sse.controller";
 import { AnalysisEventsService } from "./analysis.events.service";
+import { AnalysisAiService } from "./analysis-ai.service";
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { AnalysisEventsService } from "./analysis.events.service";
     SessionPrepFlowService,
     SessionPrepWorker,
     AnalysisEventsService,
+    AnalysisAiService,
   ],
   exports: [AnalysisService, AnalysisFlowService, SessionPrepFlowService],
 })
