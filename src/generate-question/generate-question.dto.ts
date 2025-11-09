@@ -22,7 +22,6 @@ export class CreateQuestionRequestDto {
 }
 
 // insert
-
 export class QuestionItemDto {
   @ApiProperty({ description: "text", format: "string" })
   @IsString()
@@ -50,17 +49,6 @@ export class InsertQuestionsBodyDto {
   @Type(() => QuestionItemDto)
   @ArrayNotEmpty()
   questions: QuestionItemDto[];
-}
-
-export class GenerateResponseDto {
-  @ApiProperty({ description: "생성 요청 ID", type: String })
-  request_id: string;
-
-  @ApiProperty({
-    description: "요청 상태",
-    enum: ["completed", "failed"],
-  })
-  status: "completed" | "failed";
 }
 
 export class GQRequestResponseDto {

@@ -3,12 +3,16 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { AuthModule } from "src/auth/auth.module";
 
 import { VectorStoreService } from "src/external-server/vector-store.service";
-import { GenerateQuestionService } from "./generate-question.service";
+
 import { GenerateQuestionController } from "./generate-question.controller";
 import { Question, GenerateRequest } from "../common/entities/entities";
 import { ExternalServerModule } from "../external-server/external-server.module";
 
 import { OpenaiModule } from "@/llm/openai.module";
+import { QuestionRequestService } from "./question-request.service";
+import { QuestionStreamService } from "./question-stream.service";
+import { QuestionGenerationPipeline } from "./question-generation.pipeline";
+import { EventStreamService } from "./event-stream.service";
 
 @Module({
   imports: [
@@ -17,7 +21,13 @@ import { OpenaiModule } from "@/llm/openai.module";
     ExternalServerModule,
     OpenaiModule,
   ],
-  providers: [GenerateQuestionService, VectorStoreService],
+  providers: [
+    VectorStoreService,
+    QuestionRequestService,
+    QuestionStreamService,
+    QuestionGenerationPipeline,
+    EventStreamService,
+  ],
   controllers: [GenerateQuestionController],
 })
 export class GenerateQuestionModule {}

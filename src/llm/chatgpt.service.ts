@@ -26,6 +26,7 @@ export class ChatgptService {
     this.client = new OpenAI({ apiKey: config.get<string>("OPENAI_API_KEY") });
   }
 
+  // ---------- 응답 호출 ----------
   async callResponse(opts: OpenAI.Responses.ResponseCreateParamsNonStreaming) {
     const model = opts.model ?? "gpt-5-mini";
     const input = opts?.input ?? [
@@ -118,6 +119,75 @@ export class ChatgptService {
       this.logger.error("Error calling ChatGPT", error);
       throw new InternalServerErrorException("Failed to call ChatGPT");
     }
+  }
+
+  // --------- 스트리밍 응답 호출 ----------
+  streamResponse(opts: OpenAI.Responses.ResponseCreateParamsStreaming) {
+    const model = opts.model ?? "gpt-5-mini";
+
+    const input = opts.input ?? [
+      {
+        role: "user" as const,
+        content: (opts as any)?.instructions ?? "",
+      },
+    ];
+
+    const stream = this.client.responses.stream({
+      ...opts,
+      model,
+      input,
+      reasoning: opts.reasoning ?? { effort: "low" },
+      tools: opts?.tools,
+      tool_choice: opts?.tool_choice,
+      parallel_tool_calls: opts?.parallel_tool_calls,
+    });
+
+    return stream;
+  }
+
+  streamParsedResponse<T>(
+    opts: OpenAI.Responses.ResponseCreateParamsStreaming,
+    schema: ZodType<T>,
+    parseOpts: ParseOpts = {},
+  ) {
+    const model = opts.model ?? "gpt-5-mini";
+    const input = opts.input ?? [
+      {
+        role: "user" as const,
+        content: (opts as any)?.instructions ?? "",
+      },
+    ];
+
+    const formatName = parseOpts.name ?? "response_schema";
+
+    let format: any;
+
+    try {
+      format = zodTextFormat(schema, formatName);
+    } catch (error) {
+      this.logger.error("Error generating text format from schema", error);
+      if (parseOpts.onError) parseOpts.onError(error, null);
+      throw new InternalServerErrorException(
+        "zodTextFormat 생성 실패 — 로그 확인",
+      );
+    }
+
+    const textOption = {
+      format,
+      verbosity: opts.text?.verbosity ?? "low",
+    };
+
+    const stream = this.client.responses.stream({
+      ...opts,
+      model,
+      input,
+      text: textOption,
+      tools: opts?.tools,
+      tool_choice: opts?.tool_choice,
+      parallel_tool_calls: opts?.parallel_tool_calls,
+    });
+
+    return stream;
   }
 
   withFileSearch = (

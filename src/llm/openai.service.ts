@@ -4,6 +4,14 @@ import { ChatgptService } from "./chatgpt.service";
 import { EmbeddingService } from "./embedding.service";
 import { WhisperService } from "./whisper.service";
 import { Responses } from "openai/resources/index";
+import OpenAI from "openai";
+
+type StreamOpts = OpenAI.Responses.ResponseCreateParamsStreaming;
+type ParsedStreamOpts<T> = {
+  opts: OpenAI.Responses.ResponseCreateParamsStreaming;
+  schema: ZodType<T>;
+  parseOpts?: Parameters<ChatgptService["callParsedResponse"]>[2];
+};
 
 type ChatOpts = Parameters<ChatgptService["callResponse"]>[0];
 type ParsedChatOpts<T> = {
@@ -32,6 +40,15 @@ export class OpenAIService {
     parseOpts,
   }: ParsedChatOpts<T>): Promise<T> {
     return this.chatgpt.callParsedResponse<T>(opts, schema, parseOpts);
+  }
+
+  // ---------- Chat (스트리밍) ----------
+  stream(opts: StreamOpts) {
+    return this.chatgpt.streamResponse(opts);
+  }
+
+  streamParsed<T>({ opts, schema, parseOpts }: ParsedStreamOpts<T>) {
+    return this.chatgpt.streamParsedResponse<T>(opts, schema, parseOpts);
   }
 
   // ---------- STT ----------
