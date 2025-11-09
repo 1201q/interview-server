@@ -53,24 +53,6 @@ export class FlaskServerService {
     return response.data;
   }
 
-  async getVoiceMetrics(webm: Express.Multer.File) {
-    const baseUrl = this.configService.get<string>("ML_SERVER_URL");
-
-    const form = new FormData();
-    form.append("audio", Readable.from(webm.buffer), {
-      filename: webm.originalname,
-      contentType: webm.mimetype,
-    });
-
-    const response = await lastValueFrom(
-      this.httpService.post(`${baseUrl}/voice_metrics`, form, {
-        headers: form.getHeaders(),
-      }),
-    );
-
-    return response.data;
-  }
-
   async extractTextFromPDF(
     file: Express.Multer.File,
     decodedFilename: string,
@@ -92,30 +74,6 @@ export class FlaskServerService {
     const { result, fallback } = response.data;
 
     return { result: this.tidyText(result), fallback: fallback };
-  }
-
-  async enqueueAudioJob(dto: { analysisId: string; objectName: string }) {
-    const baseUrl = this.configService.get<string>("ML_SERVER_URL");
-
-    const audioUrl = await this.oci.generatePresignedUrl(dto.objectName);
-
-    const body = {
-      analysis_id: dto.analysisId,
-      audio_url: audioUrl,
-      callback_url: `${this.configService.get<string>("NEST_URL")}/analysis/audio/callback`,
-    };
-
-    const res = await fetch(`${baseUrl}/audio/enqueue`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-
-    if (!res.ok) {
-      throw new Error(`Failed to enqueue audio job: ${res.statusText}`);
-    }
-
-    return { enqueued: true };
   }
 
   tidyText(input: string) {

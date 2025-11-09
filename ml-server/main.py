@@ -19,11 +19,6 @@ import pymupdf4llm
 import traceback
 from pathlib import Path
 
-from redis import Redis
-from rq import Queue
-
-from audio_tasks import analyze_voice
-
 
 # 최초 환경변수 로드
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
@@ -33,15 +28,9 @@ BASE_DIR = Path(__file__).resolve().parent
 app = Flask(__name__)
 NEST_URL = os.getenv("NEST_URL", "http://localhost:8000")
 
-
 # model
 DEFAULT_MODEL = BASE_DIR / "model" / "new_filler_determine_model.h5"
 model_path = str(DEFAULT_MODEL)
-
-# 큐
-RQ_URL = os.getenv("RQ_REDIS_URL", "redis://localhost:6379/1")
-redis_conn = Redis.from_url(RQ_URL)
-q_audio = Queue("audio", connection=redis_conn)
 
 
 @lru_cache(maxsize=2)
@@ -68,86 +57,6 @@ def routes():
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
-
-
-@app.get("/health/queue")
-def health_queue_check():
-    try:
-        redis_conn.ping()
-        return {"status": "ok"}, 200
-    except Exception as e:
-        return {"status": "error", "message": str(e)}, 500
-
-
-@app.post("/audio/enqueue")
-def enqueue_audio():
-    data = request.get_json(force=True) or {}
-
-    print(data)
-
-    job = q_audio.enqueue(
-        analyze_voice,
-        data["analysis_id"],
-        data["audio_url"],
-        data["callback_url"],
-        job_timeout=600,
-        result_ttl=60 * 60,
-        failure_ttl=60 * 60 * 24,
-    )
-    return jsonify({"jobId": job.id, "status": job.get_status()}), 202
-
-
-@app.post("/voice_metrics")
-def voice_metrics():
-    audio_bytes = None
-
-    if "audio" in request.files:
-        f = request.files["audio"]
-        audio_bytes = f.read()
-        mimetype = f.mimetype
-    else:
-        audio_bytes = request.get_data()
-        mimetype = request.content_type or "application/octet-stream"
-
-    if not audio_bytes:
-        return jsonify({"error": "오디오 데이터가 없습니다."}), 400
-
-    def _ensure_wav(audio_bytes: bytes, mimetype: str) -> bytes:
-        if mimetype in ("audio/wav", "audio/x-wav"):
-            # 이미 WAV면 그대로 사용
-            return audio_bytes
-        elif mimetype in ("audio/webm", "video/webm"):
-            # webm → wav 변환
-            return webm_to_wav_bytes(audio_bytes)
-        else:
-            raise ValueError(f"지원하지 않는 오디오 형식: {mimetype}")
-
-    try:
-        wav_bytes = _ensure_wav(audio_bytes, mimetype)
-    except Exception as e:
-        app.logger.exception("webm 변환 실패")
-        return jsonify({"error": "webm→wav 변환 실패", "message": str(e)}), 500
-
-    segmentation = request.args.get("segmentation", "adaptive")
-
-    params = None
-    if request.is_json:
-        body = request.get_json(silent=True) or {}
-        params = body.get("params")
-
-    model = load_filler_model(model_path)
-
-    try:
-        result = faster_run_filler_analysis_bytes(
-            audio_bytes=wav_bytes,
-            model=model,
-            segmentation=segmentation,
-            params=params,
-        )
-        return jsonify(result)
-    except Exception as e:
-        app.logger.exception("voice_metrics error")
-        return jsonify({"error": "서버 내부 오류", "message": str(e)}), 500
 
 
 # webm -> seekable webm으로 변환
