@@ -8,7 +8,7 @@ import { GenerateQuestionController } from "./generate-question.controller";
 import { Question, GenerateRequest } from "../common/entities/entities";
 import { ExternalServerModule } from "../external-server/external-server.module";
 
-import { OpenaiModule } from "@/openai/openai.module";
+import { OpenaiModule } from "@/openai-service/openai.module";
 import { QuestionRequestService } from "./question-request.service";
 import { QuestionStreamService } from "./question-stream.service";
 import { QuestionGenerationPipeline } from "./question-generation.pipeline";

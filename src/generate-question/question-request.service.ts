@@ -15,7 +15,7 @@ import {
 } from "./generate-question.dto";
 
 import { QuestionItem } from "@/common/interfaces/common.interface";
-import { OpenAIService } from "@/openai/openai.service";
+import { OpenAIService } from "@/openai-service/openai.service";
 
 @Injectable()
 export class QuestionRequestService {

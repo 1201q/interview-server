@@ -15,7 +15,7 @@ import {
   Question,
   SessionQuestion,
 } from "src/common/entities/entities";
-import { OpenaiModule } from "@/openai/openai.module";
+import { OpenaiModule } from "@/openai-service/openai.module";
 
 import { AnalysisFlowService } from "./analysis.flow.service";
 import { AnalysisWorker } from "./analysis.worker";

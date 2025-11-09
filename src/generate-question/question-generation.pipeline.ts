@@ -1,7 +1,7 @@
 import { QuestionItem } from "@/common/interfaces/common.interface";
 import { QuestionGeneratorPromptV5_1_1 } from "@/common/prompts/question-generator.prompt";
 import { makeQuestionSchema } from "@/common/schemas/prompt.schema";
-import { OpenAIService } from "@/openai/openai.service";
+import { OpenAIService } from "@/openai-service/openai.service";
 import { Injectable } from "@nestjs/common";
 import { zodTextFormat } from "openai/helpers/zod";
 import { PassThrough } from "stream";

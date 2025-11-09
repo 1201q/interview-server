@@ -1,4 +1,4 @@
-import { OpenAIService } from "@/openai/openai.service";
+import { OpenAIService } from "@/openai-service/openai.service";
 import { Injectable } from "@nestjs/common";
 import {
   FeedbackDto,

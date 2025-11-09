@@ -11,7 +11,7 @@ export class AppController {
 
   @Get()
   getHello(): string {
-    return "11234";
+    return "1";
   }
 
   @Get("test")

@@ -29,7 +29,6 @@ services:
       - app-network
     environment:
       - NEST_URL=http://interview:8000
-      - RQ_REDIS_URL=redis://redis:6379/1
       - TZ=Asia/Seoul
     platform: linux/arm64
   nginx:
@@ -64,23 +63,6 @@ services:
     restart: unless-stopped
     networks:
       - app-network
-    platform: linux/arm64
-  ml-worker:
-    image: 1201q/ml-server:latest
-    container_name: ml-worker
-    restart: always
-    depends_on: 
-      - redis
-    networks:
-      - app-network
-    environment:
-      - RQ_REDIS_URL=redis://redis:6379/1
-      - NEST_URL=http://interview:8000
-      - TZ=Asia/Seoul
-    env_file:
-      - .env
-    entrypoint: []
-    command: ["python","-m","rq.cli","worker","-u","redis://redis:6379/1","audio"]
     platform: linux/arm64
 
 networks:
