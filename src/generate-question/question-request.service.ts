@@ -34,7 +34,7 @@ export class QuestionRequestService {
   // 질문 생성 요청
   // 트랜잭션 내에서 벡터 스토어 저장 및 DB 저장 처리
   async createRequest(
-    dto: CreateQuestionRequestDto,
+    dto: CreateQuestionRequestDto & { userId: string },
   ): Promise<GQRequestResponseDto> {
     const resultDto: GQRequestResponseDto = {
       request_id: null,
@@ -47,20 +47,23 @@ export class QuestionRequestService {
           resume_text: dto.resume_text,
           job_text: dto.job_text,
           status: "pending",
+          user_id: dto.userId,
         });
+
+        const saved = await manager.save(request);
+
+        let storeId: string;
 
         try {
           const vectorResult = await this.ai.saveToVectorStore({
             resumeText: dto.resume_text,
             jobText: dto.job_text,
-            requestId: request.id,
+            requestId: saved.id,
           });
 
-          this.logger.log(
-            `Vector store saved with ID: ${vectorResult.storeId}`,
-          );
+          storeId = vectorResult.storeId;
 
-          request.vector_id = vectorResult.storeId;
+          this.logger.log(`Vector store saved with ID: ${storeId}`);
         } catch (error) {
           this.logger.error(`Failed to save to vector store: ${error.message}`);
           throw new InternalServerErrorException(
@@ -68,11 +71,15 @@ export class QuestionRequestService {
           );
         }
 
-        await manager.save(request);
+        await manager.update(
+          GenerateRequest,
+          { id: saved.id },
+          { vector_id: storeId },
+        );
 
-        this.logger.log(`GenerateRequest created with ID: ${request.id}`);
+        this.logger.log(`GenerateRequest created with ID: ${saved.id}`);
 
-        resultDto.request_id = request.id;
+        resultDto.request_id = saved.id;
         resultDto.status = request.status;
       });
     } catch (error) {
@@ -86,8 +93,23 @@ export class QuestionRequestService {
   }
 
   // 요청 상태를 'working'으로 변경
-  async markWorking(requestId: string): Promise<GenerateRequest> {
-    const req = await this.requestRepo.findOneByOrFail({ id: requestId });
+  async markWorking(
+    requestId: string,
+    userId: string,
+  ): Promise<GenerateRequest> {
+    const req = await this.requestRepo.findOne({
+      where: { id: requestId, user_id: userId },
+    });
+
+    if (!req) {
+      throw new NotFoundException("해당 id의 생성 요청이 없습니다.");
+    }
+
+    if (req.status !== "pending" && req.status !== "working") {
+      throw new InternalServerErrorException(
+        `요청 상태를 'working'으로 변경할 수 없습니다. 현재 상태: ${req.status}`,
+      );
+    }
 
     req.status = "working";
     return this.requestRepo.save(req);
@@ -113,9 +135,9 @@ export class QuestionRequestService {
     await this.requestRepo.update(request.id, { status: "failed" });
   }
 
-  async getQuestionsByRequestId(requestId: string) {
+  async getQuestionsByRequestId(requestId: string, userId: string) {
     const request = await this.requestRepo.findOne({
-      where: { id: requestId },
+      where: { id: requestId, user_id: userId },
       relations: ["questions"],
     });
 
@@ -123,7 +145,7 @@ export class QuestionRequestService {
       throw new NotFoundException("해당 id의 생성 요청이 없습니다.");
     }
 
-    if (request.questions.length === 0) {
+    if (!request.questions || request.questions.length === 0) {
       throw new NotFoundException("질문이 생성되지 않았습니다.");
     }
 
@@ -137,9 +159,12 @@ export class QuestionRequestService {
     return { questions: result };
   }
 
-  async getRequest(requestId: string): Promise<GQRequestResponseDto> {
+  async getRequest(
+    requestId: string,
+    userId: string,
+  ): Promise<GQRequestResponseDto> {
     const request = await this.requestRepo.findOne({
-      where: { id: requestId },
+      where: { id: requestId, user_id: userId },
     });
 
     if (!request) {
@@ -150,10 +175,17 @@ export class QuestionRequestService {
   }
 
   // 질문 직접 삽입 (테스트용)
-  async insertQuestions(requestId: string, dto: InsertQuestionsBodyDto) {
+  async insertQuestions(
+    requestId: string,
+    userId: string,
+    dto: InsertQuestionsBodyDto,
+  ) {
     const request = await this.requestRepo.findOne({
-      where: { id: requestId },
+      where: { id: requestId, user_id: userId },
     });
+
+    if (!request)
+      throw new NotFoundException("해당 id의 생성 요청이 없습니다.");
 
     const questions = dto.questions.map((q) =>
       this.questionRepo.create({

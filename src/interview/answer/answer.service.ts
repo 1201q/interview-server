@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, Logger } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 
 import { DataSource, EntityManager, Repository } from "typeorm";
@@ -18,6 +23,7 @@ type SubmitAnswerInput = {
   audio?: Express.Multer.File | null;
   decideFollowup?: boolean;
   faceData?: FaceFrameState[] | null;
+  userId: string;
 };
 
 @Injectable()
@@ -40,10 +46,18 @@ export class InterviewAnswerService {
   ) {}
 
   // 답변 시작
-  async startAnswer(answerId: string): Promise<void> {
-    const answer = await this.answerRepo.findOneOrFail({
-      where: { id: answerId },
+  async startAnswer(answerId: string, userId: string): Promise<void> {
+    const answer = await this.answerRepo.findOne({
+      where: {
+        id: answerId,
+        session_question: { session: { user_id: userId } },
+      },
+      relations: { session_question: { session: true } },
     });
+
+    if (!answer) {
+      throw new NotFoundException("해당 answer를 찾을 수 없습니다.");
+    }
 
     this.checkCanStart(answer);
 
@@ -53,170 +67,29 @@ export class InterviewAnswerService {
     });
   }
 
-  // answerId 제출
-  async testsubmitAnswer(
-    input: SubmitAnswerInput,
-  ): Promise<SubmitAnswerResponseDto> {
-    const { answerId, text, audio, decideFollowup = false, faceData } = input;
-
-    let objectName: string | undefined;
-
-    // 1. 음성은 트랜잭션 바깥에서 전처리/업로드
-    if (audio) {
-      const seekable = await this.flaskService.convertToSeekableWebm(audio);
-      objectName = await this.ociUploadService.uploadFileFromBuffer(
-        seekable,
-        `seekable-${audio.originalname}`,
-      );
-    }
-
-    let submittedAnswerId: string | null = null;
-    let needEnqueueSTT = false;
-    let sessionId: string | null = null;
-
-    const result = await this.dataSource.transaction<SubmitAnswerResponseDto>(
-      async (manager) => {
-        const answerRepo = manager.getRepository(Answer);
-
-        // 2. 제출 대상 Answer
-        const answer = await answerRepo.findOneOrFail({
-          where: { id: answerId },
-          relations: [
-            "session_question",
-            "session_question.session",
-            "session_question.question",
-          ],
-        });
-
-        // 3. 상태 전이 허용 범위 확인
-        if (
-          !["waiting", "answering", "ready", "submitted"].includes(
-            answer.status,
-          )
-        ) {
-          throw new BadRequestException(
-            "해당 answer 상태에서는 제출할 수 없습니다.",
-          );
-        }
-
-        if (answer.status === "submitted") {
-        } else {
-          // 4. Answer 업데이트
-          const endedAt = new Date();
-          await answerRepo.update(answer.id, {
-            status: "submitted",
-            text,
-            ended_at: endedAt,
-            ...(objectName ? { audio_path: objectName } : {}),
-          });
-        }
-
-        submittedAnswerId = answer.id;
-        sessionId = answer.session_question.session.id;
-
-        // 5. AnswerAnalysis upsert(+ 초기화)
-        const analysisRepo = manager.getRepository(AnswerAnalysis);
-        let analysis = await analysisRepo.findOne({
-          where: { answer: { id: answer.id } },
-        });
-
-        if (!analysis) {
-          analysis = analysisRepo.create({
-            answer,
-            status: "pending",
-            face_json: faceData,
-          });
-          await analysisRepo.save(analysis);
-        } else {
-          analysis.status = "pending";
-          analysis.last_error = null;
-          analysis.feedback_json = null;
-          analysis.stt_json = null;
-          analysis.refined_json = null;
-          analysis.voice_json = null;
-          analysis.face_json = faceData;
-          await analysisRepo.save(analysis);
-        }
-
-        // // 6. 꼬리질문 판별
-        // if (decideFollowup) {
-        //   try {
-        //     const followupText = await this.followupService.decideFollowupText(
-        //       manager,
-        //       sessionId,
-        //       answer.session_question,
-        //     );
-
-        //     if (followupText) {
-        //       await this.questionService.createFollowUp(
-        //         manager,
-        //         answer.session_question,
-        //         followupText,
-        //       );
-        //     }
-        //   } catch (error) {
-        //     this.logger.warn(`꼬리질문 생성 중 오류 발생: ${error.message}`);
-        //   }
-        // }
-
-        // 7. 다음 질문 조회
-        const nextQuestion = await this.questionService.getNext(
-          manager,
-          sessionId,
-        );
-
-        if (nextQuestion) {
-          // 다음 질문 answer를 조회. ready로 변경
-          const nextAnswer = await answerRepo.findOne({
-            where: { session_question: { id: nextQuestion.id } },
-          });
-
-          if (nextAnswer && nextAnswer.status === "waiting") {
-            await answerRepo.update(nextAnswer.id, { status: "ready" });
-          }
-
-          return {
-            next: {
-              questionId: nextQuestion.id,
-              order: nextQuestion.order,
-              text:
-                nextQuestion.type === "main"
-                  ? nextQuestion.question.text
-                  : nextQuestion.followup_text,
-              type: nextQuestion.type,
-              answerId: nextAnswer ? nextAnswer.id : null,
-            },
-            finished: false,
-          };
-        } else {
-          await this.sessionService.finishSession(manager, sessionId);
-          return { next: null, finished: true };
-        }
-      },
-    );
-
-    if (submittedAnswerId) {
-      needEnqueueSTT = true;
-    }
-
-    if (needEnqueueSTT && submittedAnswerId) {
-      try {
-        await this.analysisFlow.addFullFlow({
-          answerId: submittedAnswerId,
-          sessionId: sessionId,
-        });
-      } catch (error) {
-        this.logger.error(`STT 작업 큐잉 중 오류 발생: ${error.message}`);
-      }
-    }
-
-    return result;
-  }
-
   async submitAnswer(
     input: SubmitAnswerInput,
   ): Promise<SubmitAnswerResponseDto> {
-    const { answerId, text, audio, decideFollowup = false, faceData } = input;
+    const {
+      answerId,
+      text,
+      audio,
+      decideFollowup = false,
+      faceData,
+      userId,
+    } = input;
+
+    const userCheck = await this.answerRepo
+      .createQueryBuilder("a")
+      .innerJoin("a.session_question", "sq")
+      .innerJoin("sq.session", "s")
+      .where("a.id = :answerId AND s.user_id = :userId", { answerId, userId })
+      .select(["a.id", "a.status"])
+      .getOne();
+
+    if (!userCheck) {
+      throw new NotFoundException("해당 답변을 찾을 수 없습니다.");
+    }
 
     // 트랜잭션 밖 ==========
 

@@ -11,6 +11,8 @@ import {
   UploadedFile,
   UseInterceptors,
   Query,
+  UseGuards,
+  Req,
 } from "@nestjs/common";
 
 import {
@@ -20,6 +22,7 @@ import {
   ApiTags,
   ApiConsumes,
   ApiBody,
+  ApiCookieAuth,
 } from "@nestjs/swagger";
 
 import {
@@ -29,10 +32,11 @@ import {
 } from "./generate-question.dto";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { FlaskServerService } from "../external-server/flask-server.service";
-import { Response } from "express";
+import { Response, Request } from "express";
 
 import { QuestionRequestService } from "./question-request.service";
 import { QuestionStreamService } from "./question-stream.service";
+import { JwtAuthGuard } from "@/auth/guard/jwt-auh.guard";
 
 @ApiTags("이력서 생성")
 @Controller("generate-question")
@@ -84,6 +88,8 @@ export class GenerateQuestionController {
   }
 
   @Post("create")
+  @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth("accessToken")
   @ApiOperation({ summary: "질문 요청 생성" })
   @ApiResponse({
     status: HttpStatus.CREATED,
@@ -93,55 +99,74 @@ export class GenerateQuestionController {
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() dto: CreateQuestionRequestDto,
+    @Req() req: Request,
   ): Promise<GQRequestResponseDto> {
-    return this.requestService.createRequest(dto);
+    const userId = req.user["id"];
+
+    return this.requestService.createRequest({ ...dto, userId });
   }
 
   @Get(":requestId/stream")
+  @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth("accessToken")
   @ApiOperation({ summary: "질문 생성 시작" })
   async stream(
     @Param("requestId") requestId: string,
     @Query("mock") mock: string,
-    @Res() res: Response,
+    @Res({ passthrough: true }) res: Response,
+    @Req() req: Request,
   ) {
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
     res.flushHeaders();
 
+    const userId = req.user["id"];
+
     if (mock === "true") {
       return this.streamService.streamMockData(res);
     }
 
-    return this.streamService.stream(requestId, res);
+    return this.streamService.stream(requestId, userId, res);
   }
 
   @Get(":requestId/questions")
+  @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth("accessToken")
   @ApiOperation({ summary: "생성된 질문 목록 조회" })
   @ApiParam({ name: "requestId", description: "request id" })
   @ApiResponse({ status: HttpStatus.OK, description: "생성된 질문들 반환" })
-  async getQuestions(@Param("requestId") id: string) {
-    return this.requestService.getQuestionsByRequestId(id);
+  async getQuestions(@Param("requestId") id: string, @Req() req: Request) {
+    const userId = req.user["id"];
+    return this.requestService.getQuestionsByRequestId(id, userId);
   }
 
   @Get(":requestId/request")
+  @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth("accessToken")
   @ApiOperation({ summary: "request 조회" })
   @ApiParam({ name: "requestId", description: "request id" })
   @ApiResponse({ status: HttpStatus.OK, description: "request 반환" })
   async getRequest(
     @Param("requestId") id: string,
+    @Req() req: Request,
   ): Promise<GQRequestResponseDto> {
-    return this.requestService.getRequest(id);
+    const userId = req.user["id"];
+    return this.requestService.getRequest(id, userId);
   }
 
   @Post(":requestId/insert")
+  @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth("accessToken")
   @ApiOperation({ summary: "request에 질문 추가" })
   @ApiParam({ name: "requestId", description: "request id" })
   @ApiResponse({ status: HttpStatus.OK, description: "추가 성공" })
   async insertQuestions(
     @Param("requestId") id: string,
     @Body() dto: InsertQuestionsBodyDto,
+    @Req() req: Request,
   ) {
-    return this.requestService.insertQuestions(id, dto);
+    const userId = req.user["id"];
+    return this.requestService.insertQuestions(id, userId, dto);
   }
 }

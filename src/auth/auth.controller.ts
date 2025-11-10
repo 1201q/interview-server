@@ -14,6 +14,8 @@ import { GoogleAuthGuard } from "src/auth/guard/google-auth.guard";
 import { AuthService } from "./auth.service";
 import { UserService } from "src/user/user.service";
 import { ConfigService } from "@nestjs/config";
+import { JwtAuthGuard } from "./guard/jwt-auh.guard";
+import { ApiCookieAuth } from "@nestjs/swagger";
 
 type SameSite = "lax" | "strict" | "none";
 
@@ -211,5 +213,16 @@ export class AuthController {
     }
 
     return findUser;
+  }
+
+  @Post("test")
+  @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth("accessToken")
+  async testAuth(@Req() req: Request) {
+    const user = req.user["id"];
+
+    console.log("Authenticated user ID:", user);
+
+    return { message: "인증 성공", user };
   }
 }

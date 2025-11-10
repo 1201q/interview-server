@@ -1,12 +1,15 @@
 import {
   ExecutionContext,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard("jwt") {
+  private readonly logger = new Logger(JwtAuthGuard.name);
+
   canActivate(context: ExecutionContext) {
     return super.canActivate(context);
   }
@@ -25,6 +28,8 @@ export class JwtAuthGuard extends AuthGuard("jwt") {
         throw new UnauthorizedException("인증 실패: 유효하지 않은 토큰입니다.");
       }
     }
+
+    this.logger.debug(`Authenticated user: ${JSON.stringify(user)}`);
 
     return user;
   }

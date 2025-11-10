@@ -27,6 +27,9 @@ export class GenerateRequest {
   @PrimaryGeneratedColumn("uuid")
   id: string;
 
+  @Column({ type: "varchar2", length: 64, nullable: true })
+  user_id: string | null;
+
   @Column("clob")
   resume_text: string;
 

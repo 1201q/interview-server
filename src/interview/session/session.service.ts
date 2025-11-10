@@ -93,9 +93,12 @@ export class InterviewSessionService {
     return result;
   }
 
-  async getSessionDetail(id: string): Promise<SessionDetailDto> {
+  async getSessionDetail(
+    id: string,
+    userId: string,
+  ): Promise<SessionDetailDto> {
     const session = await this.sessionRepo.findOne({
-      where: { id },
+      where: { id, user_id: userId },
       relations: [
         "session_questions",
         "session_questions.question",
@@ -124,9 +127,12 @@ export class InterviewSessionService {
     };
   }
 
-  async getSessionRubric(id: string): Promise<SessionRubricDto> {
+  async getSessionRubric(
+    id: string,
+    userId: string,
+  ): Promise<SessionRubricDto> {
     const session = await this.sessionRepo.findOne({
-      where: { id },
+      where: { id, user_id: userId },
       relations: ["session_questions"],
     });
 
@@ -142,9 +148,12 @@ export class InterviewSessionService {
     };
   }
 
-  async startSession(sessionId: string): Promise<SessionResponseDto> {
+  async startSession(
+    sessionId: string,
+    userId: string,
+  ): Promise<SessionResponseDto> {
     const session = await this.sessionRepo.findOne({
-      where: { id: sessionId },
+      where: { id: sessionId, user_id: userId },
       relations: ["session_questions", "session_questions.answers"],
     });
 
@@ -196,9 +205,12 @@ export class InterviewSessionService {
   }
 
   // reset
-  async resetSession(sessionId: string): Promise<SessionResponseDto> {
+  async resetSession(
+    sessionId: string,
+    userId: string,
+  ): Promise<SessionResponseDto> {
     const session = await this.sessionRepo.findOne({
-      where: { id: sessionId },
+      where: { id: sessionId, user_id: userId },
       relations: ["session_questions", "session_questions.answers"],
     });
 

@@ -10,8 +10,6 @@ import { parser } from "stream-json";
 import { pick } from "stream-json/filters/Pick";
 import { streamArray } from "stream-json/streamers/StreamArray";
 
-import { APIUserAbortError } from "openai/error";
-
 @Injectable()
 export class QuestionGenerationPipeline {
   constructor(private readonly ai: OpenAIService) {}
