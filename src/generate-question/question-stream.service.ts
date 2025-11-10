@@ -16,8 +16,8 @@ export class QuestionStreamService {
     private readonly events: EventStreamService,
   ) {}
 
-  async stream(requestId: string, res: Response) {
-    const request = await this.requests.markWorking(requestId);
+  async stream(requestId: string, userId: string, res: Response) {
+    const request = await this.requests.markWorking(requestId, userId);
 
     let closed = false;
     let clientClosed = false;

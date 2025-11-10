@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, Logger } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 
 import { DataSource, EntityManager, Repository } from "typeorm";
@@ -18,6 +23,7 @@ type SubmitAnswerInput = {
   audio?: Express.Multer.File | null;
   decideFollowup?: boolean;
   faceData?: FaceFrameState[] | null;
+  userId: string;
 };
 
 @Injectable()
@@ -40,10 +46,18 @@ export class InterviewAnswerService {
   ) {}
 
   // 답변 시작
-  async startAnswer(answerId: string): Promise<void> {
-    const answer = await this.answerRepo.findOneOrFail({
-      where: { id: answerId },
+  async startAnswer(answerId: string, userId: string): Promise<void> {
+    const answer = await this.answerRepo.findOne({
+      where: {
+        id: answerId,
+        session_question: { session: { user_id: userId } },
+      },
+      relations: { session_question: { session: true } },
     });
+
+    if (!answer) {
+      throw new NotFoundException("해당 answer를 찾을 수 없습니다.");
+    }
 
     this.checkCanStart(answer);
 
@@ -56,7 +70,26 @@ export class InterviewAnswerService {
   async submitAnswer(
     input: SubmitAnswerInput,
   ): Promise<SubmitAnswerResponseDto> {
-    const { answerId, text, audio, decideFollowup = false, faceData } = input;
+    const {
+      answerId,
+      text,
+      audio,
+      decideFollowup = false,
+      faceData,
+      userId,
+    } = input;
+
+    const userCheck = await this.answerRepo
+      .createQueryBuilder("a")
+      .innerJoin("a.session_question", "sq")
+      .innerJoin("sq.session", "s")
+      .where("a.id = :answerId AND s.user_id = :userId", { answerId, userId })
+      .select(["a.id", "a.status"])
+      .getOne();
+
+    if (!userCheck) {
+      throw new NotFoundException("해당 답변을 찾을 수 없습니다.");
+    }
 
     // 트랜잭션 밖 ==========
 
