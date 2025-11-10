@@ -17,6 +17,8 @@ import { FlaskServerService } from "@/external-server/flask-server.service";
 import { FeedbackDto } from "./analysis.dto";
 import { AnalysisEventsService } from "./analysis.events.service";
 import { AnalysisAiService } from "./analysis-ai.service";
+import { AnalysisRepository } from "./analysis.repository";
+
 type Progress = {
   stt: number;
   refine: number;
@@ -37,8 +39,7 @@ export class AnalysisWorker extends WorkerHost {
   constructor(
     private readonly ds: DataSource,
 
-    @InjectRepository(AnswerAnalysis)
-    private readonly repo: Repository<AnswerAnalysis>,
+    private readonly analysisRepo: AnalysisRepository,
 
     @InjectRepository(InterviewSession)
     private readonly sessionRepo: Repository<InterviewSession>,
@@ -54,11 +55,7 @@ export class AnalysisWorker extends WorkerHost {
   private async computeAndUpdateProgress(answerId: string) {
     const weights = { stt: 25, refine: 25, audio: 25, feedback: 25 } as const;
 
-    const row = await this.repo.findOne({
-      where: { answer: { id: answerId } },
-      relations: ["answer"],
-    });
-
+    const row = await this.analysisRepo.findWithAnswer(answerId);
     if (!row) return;
 
     const flags = {
@@ -74,27 +71,7 @@ export class AnalysisWorker extends WorkerHost {
       (flags.audio ? weights.audio : 0) +
       (flags.feedback ? weights.feedback : 0);
 
-    await this.repo
-      .createQueryBuilder()
-      .update(AnswerAnalysis)
-      .set({
-        progress,
-        status: progress === 100 ? "completed" : "processing",
-      })
-      .where("answer_id = :answerId", { answerId })
-      .execute();
-  }
-
-  // == db 조회 ==
-  private async getAnalysis(answerId: string) {
-    return this.repo.findOne({
-      where: { answer: { id: answerId } },
-      relations: [
-        "answer",
-        "answer.session_question",
-        "answer.session_question.question",
-      ],
-    });
+    await this.analysisRepo.updateProgressAndStatus(answerId, progress);
   }
 
   private async getFeedbackDto(
@@ -108,7 +85,7 @@ export class AnalysisWorker extends WorkerHost {
       relations: ["request"],
     });
 
-    const analysis = await this.getAnalysis(answerId);
+    const analysis = await this.analysisRepo.findWithAnswer(answerId);
 
     if (!session?.request || !session.request.vector_id || !analysis)
       return null;
@@ -127,11 +104,21 @@ export class AnalysisWorker extends WorkerHost {
       select: ["rubric_gen_status", "role_guess"],
     });
 
+    if (row?.rubric_gen_status === "failed") return false;
+
     return (
       row?.rubric_gen_status === "completed" &&
       !!row?.role_guess &&
       row.role_guess.trim().length > 0
     );
+  }
+
+  private isCheckFailed(analysis: AnswerAnalysis | null, stage: string) {
+    if (analysis?.status === "failed") {
+      throw new Error(
+        `Analysis already failed before stage "${stage}", aborting.`,
+      );
+    }
   }
 
   async process(job: Job<any>, token?: string): Promise<any> {
@@ -151,21 +138,6 @@ export class AnalysisWorker extends WorkerHost {
     }
   }
 
-  private emitProgress(
-    sessionId: string,
-    answerId: string,
-    stage: "stt" | "refine" | "audio" | "feedback" | "overall",
-    value: number,
-  ) {
-    this.events.emit(sessionId, {
-      type: "progress",
-      session_id: sessionId,
-      answer_id: answerId,
-      stage,
-      value,
-    });
-  }
-
   // 1. STT
   private async handleStt(
     job: Job<{ answerId: string; sessionId: string }>,
@@ -174,7 +146,7 @@ export class AnalysisWorker extends WorkerHost {
     const { answerId, sessionId } = job.data;
 
     try {
-      await this.markStageStart(job, sessionId, answerId, "stt");
+      await this.emitStart(job, sessionId, answerId, "stt");
 
       const answer = await this.ds.getRepository(Answer).findOne({
         where: { id: answerId },
@@ -197,16 +169,19 @@ export class AnalysisWorker extends WorkerHost {
       // 3. STT API 호출
       const result = await this.ai.transcript(stream as any);
 
-      await this.repo
-        .createQueryBuilder()
-        .update(AnswerAnalysis)
-        .set({ stt_json: result })
-        .where("answer_id = :answerId", { answerId })
-        .execute();
+      await this.analysisRepo.updateSttResult(answerId, result);
 
-      await this.markStageComplete(job, sessionId, answerId, "stt");
+      await this.emitCompleted(job, sessionId, answerId, "stt");
       return { ok: true, sessionId, answerId };
     } catch (error) {
+      // DelayedError는 무시
+      if (error instanceof DelayedError) {
+        throw error;
+      }
+
+      const msg = (error as Error)?.message ?? "unknown error";
+      await this.analysisRepo.markFailed(answerId, msg);
+
       this.emitFailed(sessionId, answerId, error);
       throw error;
     }
@@ -220,9 +195,12 @@ export class AnalysisWorker extends WorkerHost {
     const { answerId, sessionId } = job.data;
 
     try {
-      await this.markStageStart(job, sessionId, answerId, "refine");
+      await this.emitStart(job, sessionId, answerId, "refine");
 
-      const analysis = await this.getAnalysis(answerId);
+      const analysis = await this.analysisRepo.findWithAnswer(answerId);
+
+      this.isCheckFailed(analysis, "refine");
+
       const sttJson = analysis?.stt_json as { segments?: any[] } | undefined;
 
       if (
@@ -243,16 +221,19 @@ export class AnalysisWorker extends WorkerHost {
         segments: sttJson.segments,
       });
 
-      await this.repo
-        .createQueryBuilder()
-        .update(AnswerAnalysis)
-        .set({ refined_json: refined })
-        .where("answer_id = :answerId", { answerId })
-        .execute();
+      await this.analysisRepo.updateRefinedResult(answerId, refined);
 
-      await this.markStageComplete(job, sessionId, answerId, "refine");
+      await this.emitCompleted(job, sessionId, answerId, "refine");
       return { ok: true, sessionId, answerId };
     } catch (error) {
+      // DelayedError는 무시
+      if (error instanceof DelayedError) {
+        throw error;
+      }
+
+      const msg = (error as Error)?.message ?? "unknown error";
+      await this.analysisRepo.markFailed(answerId, msg);
+
       this.emitFailed(sessionId, answerId, error);
       throw error;
     }
@@ -266,32 +247,36 @@ export class AnalysisWorker extends WorkerHost {
     const { sessionId, answerId } = job.data;
 
     try {
-      await this.markStageStart(job, sessionId, answerId, "audio");
+      await this.emitStart(job, sessionId, answerId, "audio");
 
-      const analysis = await this.getAnalysis(answerId);
+      const analysis = await this.analysisRepo.findWithAnswer(answerId);
+      this.isCheckFailed(analysis, "refine");
 
       if (analysis?.voice_json) {
         // 이미 처리된 경우
-        await this.markStageComplete(job, sessionId, answerId, "audio");
+        await this.emitCompleted(job, sessionId, answerId, "audio");
         return { ok: true, sessionId, answerId };
       }
 
       const res = await this.triggerAudioAnalyze(answerId);
 
       if (res.ok && res.data) {
-        await this.repo
-          .createQueryBuilder()
-          .update(AnswerAnalysis)
-          .set({ voice_json: res.data })
-          .where("answer_id = :answerId", { answerId })
-          .execute();
+        await this.analysisRepo.updateVoiceResult(answerId, res.data);
 
-        await this.markStageComplete(job, sessionId, answerId, "audio");
+        await this.emitCompleted(job, sessionId, answerId, "audio");
         return { ok: true, sessionId, answerId };
       }
 
       return this.delayAndExit(job, 30_000, token);
     } catch (error) {
+      // DelayedError는 무시
+      if (error instanceof DelayedError) {
+        throw error;
+      }
+
+      const msg = (error as Error)?.message ?? "unknown error";
+      await this.analysisRepo.markFailed(answerId, msg);
+
       this.emitFailed(sessionId, answerId, error);
       throw error;
     }
@@ -300,7 +285,7 @@ export class AnalysisWorker extends WorkerHost {
   private async triggerAudioAnalyze(
     answerId: string,
   ): Promise<{ ok: boolean; data?: any }> {
-    const analysis = await this.getAnalysis(answerId);
+    const analysis = await this.analysisRepo.findWithAnswer(answerId);
 
     if (!analysis?.answer.audio_path) {
       this.logger.warn(`audio_path not found for answerId=${answerId}`);
@@ -328,19 +313,34 @@ export class AnalysisWorker extends WorkerHost {
     const { sessionId, answerId } = job.data;
 
     try {
+      await this.emitStart(job, sessionId, answerId, "feedback");
+
       // refine 준비 여부
-      const analysis = await this.getAnalysis(answerId);
+      const analysis = await this.analysisRepo.findWithAnswer(answerId);
       const refineReady = !!analysis?.refined_json;
 
       // rubric 준비 여부
       const rubricReady = await this.isSessionReady(sessionId);
 
+      if (!rubricReady) {
+        // rubric이 실패인지 체크
+        const session = await this.sessionRepo.findOne({
+          where: { id: sessionId },
+          select: ["rubric_gen_status"],
+        });
+
+        // 실패 상태면 즉시 실패 처리
+        if (session?.rubric_gen_status === "failed") {
+          throw new Error(
+            "Rubric generation failed, cannot proceed to feedback.",
+          );
+        }
+      }
+
       // check
       if (!refineReady || !rubricReady) {
         return this.delayAndExit(job, 15_000, token);
       }
-
-      await this.markStageStart(job, sessionId, answerId, "feedback");
 
       // 실제 feedback 처리
       const dto = await this.getFeedbackDto(sessionId, answerId);
@@ -350,16 +350,19 @@ export class AnalysisWorker extends WorkerHost {
       }
 
       const feedback = await this.ai.feedback(dto);
-      await this.repo
-        .createQueryBuilder()
-        .update(AnswerAnalysis)
-        .set({ feedback_json: feedback })
-        .where("answer_id = :answerId", { answerId })
-        .execute();
+      await this.analysisRepo.updateFeedbackResult(answerId, feedback);
 
-      await this.markStageComplete(job, sessionId, answerId, "feedback");
+      await this.emitCompleted(job, sessionId, answerId, "feedback");
       return { ok: true, sessionId, answerId };
     } catch (error) {
+      // DelayedError는 무시
+      if (error instanceof DelayedError) {
+        throw error;
+      }
+
+      const msg = (error as Error)?.message ?? "unknown error";
+      await this.analysisRepo.markFailed(answerId, msg);
+
       this.emitFailed(sessionId, answerId, error);
       throw error;
     }
@@ -373,12 +376,7 @@ export class AnalysisWorker extends WorkerHost {
 
     await job.updateProgress(100);
 
-    await this.repo
-      .createQueryBuilder()
-      .update(AnswerAnalysis)
-      .set({ status: "completed", progress: 100 })
-      .where("answer_id = :answerId", { answerId })
-      .execute();
+    await this.analysisRepo.updateProgressAndStatus(answerId, 100);
 
     this.events.emit(sessionId, {
       type: "completed",
@@ -390,6 +388,18 @@ export class AnalysisWorker extends WorkerHost {
   }
 
   private async delayAndExit(job: Job, delayMs: number, token?: string) {
+    const maxDelayCount = 20;
+    const current = (job.data._delayCount ?? 0) + 1;
+
+    await job.updateData({ ...job.data, _delayCount: current });
+
+    if (current > maxDelayCount) {
+      // 최대 지연 횟수 초과시 실패 간주
+      throw new Error(
+        `Max delay exceeded in job "${job.name}", answerId=${(job.data as any).answerId}`,
+      );
+    }
+
     await job.moveToDelayed(Date.now() + delayMs, token);
     throw new DelayedError();
   }
@@ -410,6 +420,21 @@ export class AnalysisWorker extends WorkerHost {
     return file;
   }
 
+  private emitProgress(
+    sessionId: string,
+    answerId: string,
+    stage: "stt" | "refine" | "audio" | "feedback" | "overall",
+    value: number,
+  ) {
+    this.events.emit(sessionId, {
+      type: "progress",
+      session_id: sessionId,
+      answer_id: answerId,
+      stage,
+      value,
+    });
+  }
+
   private emitFailed(sessionId: string, answerId: string, error: unknown) {
     this.events.emit(sessionId, {
       type: "failed",
@@ -419,7 +444,7 @@ export class AnalysisWorker extends WorkerHost {
     });
   }
 
-  private async markStageStart(
+  private async emitStart(
     job: Job,
     sessionId: string,
     answerId: string,
@@ -429,7 +454,7 @@ export class AnalysisWorker extends WorkerHost {
     await job.updateProgress(40);
   }
 
-  private async markStageComplete(
+  private async emitCompleted(
     job: Job,
     sessionId: string,
     answerId: string,

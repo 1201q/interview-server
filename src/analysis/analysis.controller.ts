@@ -50,18 +50,6 @@ export class AnalysisController {
     return this.analysisService.getStatuses(sessionId);
   }
 
-  @Get(":answerId/par_url")
-  @ApiOperation({
-    summary: "par_url",
-  })
-  async parUrl(@Param("answerId") answerId: string) {
-    const objectName = await this.analysisService.getObjectName(answerId);
-
-    const url = await this.oci.generatePresignedUrl(objectName);
-
-    return url;
-  }
-
   @Get(":answerId/par")
   @ApiOperation({
     summary: "par",
@@ -72,23 +60,6 @@ export class AnalysisController {
     const url = await this.oci.generatePresignedUrl(objectName);
 
     res.redirect(302, url);
-  }
-
-  @Get("result/bulk")
-  @ApiOperation({ summary: "면접 분석 가져오기" })
-  // @ApiResponse({ type: SessionResponseDto })
-  @ApiCookieAuth("accessToken")
-  async create(
-    // @Body() body: CreateInterviewSessionBodyDto,
-    @Req() req: Request,
-  ) {
-    const token = req.cookies.accessToken as string;
-    const { id } = await this.authService.decodeAccessToken(token);
-
-    // return this.sessionService.createSession({
-    //   ...body,
-    //   user_id: id,
-    // });
   }
 
   @Get("results/list")
