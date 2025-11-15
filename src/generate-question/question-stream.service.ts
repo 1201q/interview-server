@@ -5,6 +5,7 @@ import { EventStreamService } from "./event-stream.service";
 import { Response } from "express";
 import { QuestionItem } from "@/common/schemas/prompt.schema";
 import { MOCK_QUESTIONS } from "@/common/constants/mock-question";
+import { GenerateRequest } from "@/common/entities/entities";
 
 @Injectable()
 export class QuestionStreamService {
@@ -16,13 +17,22 @@ export class QuestionStreamService {
     private readonly events: EventStreamService,
   ) {}
 
-  async stream(requestId: string, userId: string, res: Response) {
+  // 무한 반복 방지용
+  async checkAndMarkWorking(requestId: string, userId: string) {
     const request = await this.requests.markWorking(requestId, userId);
+    return request;
+  }
 
+  stream(request: GenerateRequest, res: Response) {
     let closed = false;
     let clientClosed = false;
 
+    this.logger.log(
+      `Starting question generation stream for request ${request.id}`,
+    );
+
     const safeEnd = (hb?: NodeJS.Timeout) => {
+      this.logger.debug(`Ending stream for request ${request.id}`);
       if (!closed) {
         closed = true;
         if (hb) clearInterval(hb);
@@ -118,6 +128,7 @@ export class QuestionStreamService {
     });
 
     res.on("close", () => {
+      this.logger.debug(`Client closed connection for request ${request.id}`);
       clientClosed = true;
       try {
         // (stream as any).abort?.();

@@ -1,4 +1,6 @@
 import {
+  BadRequestException,
+  ConflictException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -105,9 +107,23 @@ export class QuestionRequestService {
       throw new NotFoundException("해당 id의 생성 요청이 없습니다.");
     }
 
-    if (req.status !== "pending" && req.status !== "working") {
+    if (req.status === "working") {
+      return req;
+    }
+
+    if (req.status === "completed") {
+      throw new ConflictException("이미 질문 생성이 완료된 요청입니다.");
+    }
+
+    if (req.status === "failed") {
+      throw new BadRequestException(
+        "이 요청은 질문 생성에 실패했습니다. 새 요청을 다시 생성해주세요.",
+      );
+    }
+
+    if (req.status !== "pending") {
       throw new InternalServerErrorException(
-        `요청 상태를 'working'으로 변경할 수 없습니다. 현재 상태: ${req.status}`,
+        `알 수 없는 요청 상태입니다: ${req.status}`,
       );
     }
 

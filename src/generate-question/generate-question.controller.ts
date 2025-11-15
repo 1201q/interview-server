@@ -113,21 +113,34 @@ export class GenerateQuestionController {
   async stream(
     @Param("requestId") requestId: string,
     @Query("mock") mock: string,
-    @Res({ passthrough: true }) res: Response,
+    @Res() res: Response,
     @Req() req: Request,
   ) {
+    const userId = req.user["id"];
+
+    if (mock === "true") {
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.flushHeaders();
+
+      this.streamService.streamMockData(res);
+      return;
+    }
+
+    // 체크
+    const request = await this.streamService.checkAndMarkWorking(
+      requestId,
+      userId,
+    );
+
+    // 헤더 설정
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
     res.flushHeaders();
 
-    const userId = req.user["id"];
-
-    if (mock === "true") {
-      return this.streamService.streamMockData(res);
-    }
-
-    return this.streamService.stream(requestId, userId, res);
+    this.streamService.stream(request, res);
   }
 
   @Get(":requestId/questions")
