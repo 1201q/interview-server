@@ -106,6 +106,16 @@ export class GenerateQuestionController {
     return this.requestService.createRequest({ ...dto, userId });
   }
 
+  @Get("/requests/list")
+  @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth("accessToken")
+  @ApiOperation({ summary: "내가 생성한 request 목록" })
+  @ApiResponse({ status: HttpStatus.OK, description: "나의 request 목록 반환" })
+  async getRequestList(@Req() req: Request) {
+    const userId = req.user["id"];
+    return this.requestService.getRequestsWithUsageByUserId(userId);
+  }
+
   @Get(":requestId/stream")
   @UseGuards(JwtAuthGuard)
   @ApiCookieAuth("accessToken")

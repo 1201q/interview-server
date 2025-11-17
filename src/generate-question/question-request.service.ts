@@ -9,7 +9,12 @@ import {
 import { InjectRepository } from "@nestjs/typeorm";
 
 import { DataSource, Repository } from "typeorm";
-import { Question, GenerateRequest } from "../common/entities/entities";
+import {
+  Question,
+  GenerateRequest,
+  InterviewSession,
+  GenerateStatus,
+} from "../common/entities/entities";
 import {
   CreateQuestionRequestDto,
   GQRequestResponseDto,
@@ -28,6 +33,9 @@ export class QuestionRequestService {
     private readonly requestRepo: Repository<GenerateRequest>,
     @InjectRepository(Question)
     private readonly questionRepo: Repository<Question>,
+
+    @InjectRepository(InterviewSession)
+    private readonly sessionRepo: Repository<InterviewSession>,
     private readonly dataSource: DataSource,
 
     private readonly ai: OpenAIService,
@@ -188,6 +196,75 @@ export class QuestionRequestService {
     }
 
     return { request_id: request.id, status: request.status };
+  }
+
+  async getRequestsWithQuestionCountByUserId(userId: string) {
+    const requests = await this.requestRepo.find({
+      where: { user_id: userId },
+      order: { created_at: "DESC" },
+      relations: ["questions"],
+    });
+
+    if (!requests) {
+      throw new NotFoundException("해당 id의 생성 요청이 없습니다.");
+    }
+
+    const results = requests.map((r) => ({
+      request_id: r.id,
+      status: r.status,
+      questions_count: r.questions ? r.questions.length : 0,
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+    }));
+
+    return { results };
+  }
+
+  async getRequestsWithUsageByUserId(userId: string) {
+    const qb = this.requestRepo
+      .createQueryBuilder("r")
+      .leftJoin("r.questions", "q")
+      .leftJoin(
+        InterviewSession,
+        "s",
+        "s.request = r.id AND s.user_id = :userId2",
+        { userId2: userId },
+      )
+      .where("r.user_id = :userId", { userId })
+      .select("r.id", "request_id")
+      .addSelect("r.status", "status")
+      .addSelect("r.created_at", "created_at")
+      .addSelect("r.updated_at", "updated_at")
+      .addSelect("COUNT(DISTINCT q.id)", "questions_count")
+      .addSelect("COUNT(DISTINCT s.id)", "session_count")
+      .addSelect("MAX(s.created_at)", "last_session_at")
+      .groupBy("r.id")
+      .addGroupBy("r.status")
+      .addGroupBy("r.created_at")
+      .addGroupBy("r.updated_at")
+      .orderBy("r.created_at", "DESC");
+
+    const raw = await qb.getRawMany<{
+      request_id: string;
+      status: GenerateStatus;
+      created_at: Date;
+      updated_at: Date;
+      questions_count: string;
+      session_count: string | null;
+      last_session_at: Date | null;
+    }>();
+
+    const results = raw.map((row) => ({
+      request_id: row.request_id,
+      status: row.status,
+      questions_count: Number(row.questions_count) || 0,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      session_count: Number(row.session_count ?? 0),
+      last_session_at: row.last_session_at,
+    }));
+
+    return { results };
   }
 
   // 질문 직접 삽입 (테스트용)

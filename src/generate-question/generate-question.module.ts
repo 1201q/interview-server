@@ -5,7 +5,11 @@ import { AuthModule } from "src/auth/auth.module";
 import { VectorStoreService } from "src/external-server/vector-store.service";
 
 import { GenerateQuestionController } from "./generate-question.controller";
-import { Question, GenerateRequest } from "../common/entities/entities";
+import {
+  Question,
+  GenerateRequest,
+  InterviewSession,
+} from "../common/entities/entities";
 import { ExternalServerModule } from "../external-server/external-server.module";
 
 import { OpenaiModule } from "@/openai-service/openai.module";
@@ -16,7 +20,7 @@ import { EventStreamService } from "./event-stream.service";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([GenerateRequest, Question]),
+    TypeOrmModule.forFeature([GenerateRequest, Question, InterviewSession]),
     AuthModule,
     ExternalServerModule,
     OpenaiModule,
